@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <title>Shiva's Exam Journal</title>
+<meta name="app-version" content="2026-10-25.11">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2c4bd1">
@@ -147,12 +148,8 @@ table.cmt td.est{background:var(--sunk);color:var(--fg)}
 .cms{text-align:left;font-weight:600;color:var(--fg)}
 @media (max-width:520px){table.cmt th:first-child,table.cmt td:first-child{min-width:140px;max-width:160px}}
 .gc.inx{background:var(--non-soft);color:var(--non);border-color:transparent}
-.ver{background:none;border:0;padding:2px 0;cursor:pointer;color:var(--muted);font-size:.78rem;text-align:left;display:inline-flex;gap:6px;align-items:center}
-.ver:hover{color:var(--accent)}
-.newdot{font-size:.62rem;font-weight:700;background:var(--accent);color:var(--on-accent);border-radius:999px;padding:1px 6px}
-.dlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50;padding:16px}
-.dlgbox{background:var(--surface);color:var(--fg);border-radius:12px;padding:18px;max-width:480px;width:100%;display:grid;gap:12px;max-height:85vh;overflow:auto}
-.uplog{display:grid;gap:10px}.upi{border-top:1px solid var(--line);padding-top:8px;display:grid;gap:2px}
+.ttl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.verpill{font-family:"IBM Plex Mono",monospace;font-size:.7rem;font-weight:600;letter-spacing:.03em;padding:2px 7px;border-radius:5px;background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn)}
 .syncbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .bkdlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50;padding:16px}
 .bkdlg>div{background:var(--surface);color:var(--fg);border-radius:12px;padding:18px;max-width:420px;width:100%;display:grid;gap:12px}
@@ -279,8 +276,7 @@ textarea{min-height:62px;resize:vertical}
  <header class="top">
   <div class="who">
    <span class="label">Shiva Bajpayee · B.Tech Civil 2026 · MP</span>
-   <h1>Exam Journal</h1>
-   <button class="ver" id="verBtn" aria-label="What's new"></button>
+   <div class="ttl"><h1>Exam Journal</h1><span id="appVerPill" class="verpill">v</span></div>
   </div>
   <div class="syncbar"><span id="mode" class="mode">Connecting…</span><button class="btn ghost sm" id="authBtn" hidden></button><button class="btn ghost sm" id="bkBtn" title="Download or restore a backup">Backup</button></div>
  </header>
@@ -728,28 +724,8 @@ function renderCommon(){
   return `<tr data-cmrow="${m}"><td><button class="lnk cms" data-open="${m}"><span class="sd ${isTech(m)?"tech":"non"}">${isTech(m)?"Tech":"Non-tech"}</span> ${esc(MODS[m].n)}</button><div class="small muted">${pc.total} topics · ${p}% done</div></td><td class="num"><b>${examsOf(m).length}</b></td>${EXAMS.map(e=>{const c=(EXW[e.id]||{})[m];return `<td class="cmv ${c?(c[1]?"est":"on"):""}">${c?esc(c[0]):""}</td>`;}).join("")}</tr>`;}).join("")}</tbody></table>`;
 }
 
-/* ---------------- UPDATE LOG: every update gets a version + name (newest last) ---------------- */
-const UPDATES=[
- {v:"1.0",d:"2026-10-24",n:"First build",i:["11 exams with full syllabus checklists","Countdowns, study-hours chart, mock scores","Daily journal"]},
- {v:"1.1",d:"2026-10-24",n:"My study material",i:["Civil topics tagged Match / No match / My material","Your iPad folder names on each subject"]},
- {v:"1.2",d:"2026-10-24",n:"Guide mode",i:["Learning order (SOM → TOS → RCC…)","Needs-first hints, timeline, revision reminders (1/7/30 days)","Weak spots and PYQ counter"]},
- {v:"1.3",d:"2026-10-24",n:"Now studying + sequence",i:["Current subject and topic","Full 1st-to-last order with weightage","Exam facts refreshed"]},
- {v:"1.4",d:"2026-10-24",n:"Exam overview + cutoffs",i:["Subjects, topics, tough/medium/easy per exam","Your weak subjects","General (UR) cutoffs with safe targets"]},
- {v:"1.5",d:"2026-10-24",n:"Tech vs non-tech split",i:["Split in each technical exam and across all exams"]},
- {v:"1.6",d:"2026-10-24",n:"Clean-up + speed",i:["Fixed tabs showing stacked","Folded study notes, slimmer tags, nearest exam first","About 10× faster updates"]},
- {v:"2.0",d:"2026-10-25",n:"Own app + sync",i:["Live site on GitHub Pages","Google sign-in, sync on phone, iPad, laptop","Works offline, Backup / Restore, home-screen app"]},
- {v:"2.1",d:"2026-10-25",n:"Common subjects",i:["New Common tab: subject × exam weightage","Top shared subjects, filters","\"In N of 11 exams\" tag"]},
- {v:"2.2",d:"2026-10-25",n:"Update names",i:["Every update now has a version and name","What's new list (tap the version under the title)"]}
-];
-const CUR=UPDATES[UPDATES.length-1];
-const SEENK="shiva-exam-journal-seen";
-function renderVer(){let seen="";try{seen=localStorage.getItem(SEENK)||"";}catch(e){}
- const b=document.getElementById("verBtn");b.innerHTML=`v${CUR.v} · ${esc(CUR.n)} · ${fmtDate(CUR.d)}${seen!==CUR.v?' <span class="newdot">New</span>':""}`;}
-function showUpdates(){
- try{localStorage.setItem(SEENK,CUR.v);}catch(e){}renderVer();
- const d=document.createElement("div");d.className="dlg";d.innerHTML=`<div role="dialog" aria-modal="true" aria-label="What's new" class="dlgbox"><div class="row"><h3>What's new</h3><button class="lnk" data-x>Close</button></div><div class="uplog">${[...UPDATES].reverse().map((u,k)=>`<div class="upi"><div class="row"><b>v${u.v} · ${esc(u.n)}</b>${k===0?'<span class="pill st-selected">Current</span>':""}</div><div class="small muted">${fmtDate(u.d)}</div><ul class="wl">${u.i.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")}</div></div>`;
- document.body.appendChild(d);const close=()=>d.remove();d.onclick=e=>{if(e.target===d||e.target.hasAttribute("data-x"))close();};
-}
+/* ---------------- APP VERSION: bump <meta name="app-version"> (date.build) on every update ---------------- */
+function renderVer(){const v=(document.querySelector('meta[name="app-version"]')||{}).content||"";const p=document.getElementById("appVerPill");if(p&&v){p.textContent="v"+v.slice(5);p.title="This copy: "+v+". Devices on different builds can disagree, so check they match.";}}
 function renderChips(){document.getElementById("exchips").innerHTML=EXAMS.map(e=>`<button class="chip ${e.t}" data-sel="${e.id}" aria-pressed="${e.id===curExam}">${esc(e.name)}</button>`).join("");}
 function renderSyllabus(){
  renderChips();const e=EXBY[curExam];const i=examInfo(e.id);const p=examPct(e);
@@ -895,7 +871,6 @@ document.addEventListener("click",ev=>{
  else if(b.dataset.pin){const [t,m]=b.dataset.pin.split("|");setCur(t,m);}
  else if(b.dataset.rev){const [m,id]=b.dataset.rev.split("|");markRevised(m,id);}
  else if(b.dataset.track){curTrack=b.dataset.track;renderGuide();}
- else if(b.id==="verBtn"){showUpdates();}
  else if(b.dataset.cmf){cmFilter=b.dataset.cmf;renderCommon();}
  else if(b.dataset.open){const m=b.dataset.open;const ex=EXAMS.find(e=>e.id===curExam&&examMods(e).includes(m))||EXAMS.find(e=>examMods(e).includes(m));curExam=ex.id;curSrc="";openMods.add(m);renderSyllabus();showTab("syllabus");}
  else if(b.dataset.del){if(b.dataset.confirm){pendingDel=null;delEntry(b.dataset.del);}else{pendingDel=b.dataset.del;renderLedger();setTimeout(()=>{if(pendingDel===b.dataset.del){pendingDel=null;renderLedger();}},4000);}}
