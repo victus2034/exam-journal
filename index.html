@@ -131,6 +131,22 @@ nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--
 .sqp{display:flex;align-items:center;gap:6px}.sqp .bar{width:60px}
 .f.w3{grid-column:span 3}
 @media (max-width:860px){.f.w3{grid-column:1/-1}}
+.cmtop{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.cmc{display:flex;gap:10px;align-items:center;text-align:left;border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:8px 10px;cursor:pointer;color:var(--fg);min-width:0}
+.cmc:hover{border-color:var(--accent)}.cmc span{display:grid;gap:1px}
+.cmn{font-size:1.4rem;font-weight:600;color:var(--accent);min-width:28px;text-align:center}
+table.cmt{min-width:1180px}
+table.cmt th:first-child,table.cmt td:first-child{position:sticky;left:0;background:var(--surface);z-index:1;min-width:200px;max-width:240px}
+table.cmt th:first-child{background:var(--sunk)}
+table.cmt td{font-size:.78rem;text-align:center;white-space:nowrap}
+table.cmt td:first-child{text-align:left;white-space:normal}
+table.cmt td.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+table.cmt td.est{background:var(--sunk);color:var(--fg)}
+.cmh{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.cmh.tech{color:var(--tech)}.cmh.non{color:var(--non)}
+.cms{text-align:left;font-weight:600;color:var(--fg)}
+@media (max-width:520px){table.cmt th:first-child,table.cmt td:first-child{min-width:140px;max-width:160px}}
+.gc.inx{background:var(--non-soft);color:var(--non);border-color:transparent}
 .syncbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .bkdlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50;padding:16px}
 .bkdlg>div{background:var(--surface);color:var(--fg);border-radius:12px;padding:18px;max-width:420px;width:100%;display:grid;gap:12px}
@@ -266,6 +282,7 @@ textarea{min-height:62px;resize:vertical}
   <button role="tab" id="t-overview" aria-selected="true" data-tab="overview">Overview</button>
   <button role="tab" id="t-guide" aria-selected="false" data-tab="guide">Guide</button>
   <button role="tab" id="t-syllabus" aria-selected="false" data-tab="syllabus">Syllabus</button>
+  <button role="tab" id="t-common" aria-selected="false" data-tab="common">Common</button>
   <button role="tab" id="t-journal" aria-selected="false" data-tab="journal">Journal</button>
   <button role="tab" id="t-exams" aria-selected="false" data-tab="exams">Exam dates</button>
  </nav>
@@ -312,6 +329,13 @@ textarea{min-height:62px;resize:vertical}
   </div>
   <div class="row"><div class="chips" id="srcf"></div><span class="small muted">Tags compare each topic with your Study Material folders</span></div>
   <div class="mods" id="mods"></div>
+ </section>
+
+ <!-- COMMON -->
+ <section id="v-common" class="view" hidden style="display:grid;gap:16px">
+  <div class="panel"><div class="row"><h3>Study once, use in many exams</h3><span class="small muted">Subjects shared by the most exams</span></div><div class="cmtop" id="cmtop"></div></div>
+  <div class="chips" id="cmf"></div>
+  <div class="panel" style="padding:0;overflow:hidden;gap:0"><div style="padding:14px 16px;display:grid;gap:4px"><h3>Subject × exam weightage</h3><div class="small muted">Each cell = questions (or marks) for that subject in that exam. <b>~</b> = my estimate from SSC JE Paper 2 share, because the board does not publish a split. <b>Section 50</b> = the subject shares a 50-Q section with others. <b>✓</b> = in syllabus, size not fixed. Tap a subject to open its topics, or an exam to open its syllabus.</div></div><div class="seqwrap" id="cmtable"></div></div>
  </section>
 
  <!-- JOURNAL -->
@@ -665,6 +689,37 @@ function overviewHtml(e){
   <div class="ovc"><div class="label">General (UR) cutoff · past cycles</div>${C.rows.map(r=>`<div class="ovr"><span class="small muted">${esc(r[0])}</span><b class="small num">${esc(r[1])}</b></div>`).join("")}<div class="ovt"><b>Your safe target:</b> ${esc(C.tgt)}</div><div class="small muted">${C.src?`Source: <a href="${C.src[1]}" target="_blank" rel="noopener">${esc(C.src[0])}</a>. `:""}Past numbers only. Cutoffs change every year.</div></div>
  </div></div>`;
 }
+
+/* ---------------- COMMON: subject weightage in every exam ---------------- */
+const EXS={sscje:"SSC JE",rrbje:"RRB JE",mppscae:"MPPSC AE",mpesb:"MPESB",mpdept:"MP dept",fcije:"FCI JE",cgl:"SSC CGL",ntpc:"NTPC",ibps:"IBPS PO",sbi:"SBI PO",rbi:"RBI"};
+// [text, estimate?] per exam per subject. Qs unless "marks". Civil split for non-SSC boards is my estimate from SSC JE Paper 2 share.
+const EXW=(()=>{const W={};const put=(e,m,t,est)=>{(W[e]=W[e]||{})[m]=[t,!!est];};
+ CIVIL.forEach(m=>{const w=GUIDE[m].wt;const t=w?String(w):"0–2";put("sscje",m,t);["rrbje","mppscae","mpesb","fcije"].forEach(e=>put(e,m,"~"+t,1));put("mpdept",m,"✓");});
+ put("rrbje","env","~6 + 10",1);
+ [["reas","50"],["gk","Section 50"],["sci","Section 50"],["ca","Section 50"]].forEach(([m,t])=>put("sscje",m,t));
+ [["quant","Maths 30"],["advm","Maths 30"],["reas","25"],["gk","GA 15+15"],["ca","GA 15+15"],["sci","30 + 15"],["comp","10"]].forEach(([m,t])=>put("rrbje",m,t));
+ ["gk","mpgk","ca","sci"].forEach(m=>put("mppscae",m,"Part A 50"));
+ ["gk","mpgk","eng","quant","reas","sci","comp"].forEach(m=>put("mpesb",m,"Part A 100 marks"));
+ ["gk","mpgk"].forEach(m=>put("mpdept",m,"✓"));
+ ["reas","quant","gk","ca","comp"].forEach(m=>put("fcije",m,"✓"));
+ [["reas","25 · 30"],["quant","25 · 30"],["advm","25 · 30"],["eng","25 · 45"],["gk","GA 25 · 25"],["ca","GA 25 · 25"],["sci","GA 25"],["comp","T2 20"]].forEach(([m,t])=>put("cgl",m,t));
+ [["gk","GA 40 · 50"],["ca","GA 40 · 50"],["sci","GA 40 · 50"],["quant","30 · 35"],["advm","30 · 35"],["reas","30 · 35"]].forEach(([m,t])=>put("ntpc",m,t));
+ [["eng","30 · 35"],["quant","Pre 35"],["bdi","Pre 35 · M 35"],["breas","Pre 35 · M 40"],["bank","M 35"],["ca","M 35"],["desc","25 marks"]].forEach(([m,t])=>put("ibps",m,t));
+ [["eng","Pre 40 · M ✓"],["quant","Pre 30"],["bdi","Pre 30 · M ✓"],["breas","Pre 30 · M ✓"],["bank","M ✓"],["ca","M ✓"],["comp","M ✓"],["desc","50 marks"]].forEach(([m,t])=>put("sbi",m,t));
+ [["gk","GA 80"],["ca","GA 80"],["bank","GA 80"],["eng","30 · 100 marks"],["quant","30"],["bdi","30"],["breas","60"],["esi","100 marks"],["fmgt","100 marks"],["desc","Eng 100 marks"],["comp","Asst ✓"]].forEach(([m,t])=>put("rbi",m,t));
+ return W;})();
+const examsOf=m=>EXAMS.filter(e=>examMods(e).includes(m));
+let cmFilter="all";
+function renderCommon(){
+ const all=Object.keys(MODS).filter(m=>examsOf(m).length);
+ const top=[...all].sort((a,b)=>examsOf(b).length-examsOf(a).length||orderOf[a]-orderOf[b]).slice(0,6);
+ document.getElementById("cmtop").innerHTML=top.map(m=>{const ex=examsOf(m);return `<button class="cmc" data-open="${m}"><span class="num cmn">${ex.length}</span><span style="min-width:0"><b>${esc(MODS[m].n)}</b><span class="small muted">${ex.length} of ${EXAMS.length} exams · ${ex.map(e=>EXS[e.id]).join(", ")}</span></span></button>`;}).join("");
+ document.getElementById("cmf").innerHTML=[["all","All subjects"],["tech","Technical"],["non","Non-tech"],["many","In 5+ exams"]].map(f=>`<button class="chip" data-cmf="${f[0]}" aria-pressed="${f[0]===cmFilter}">${f[1]}</button>`).join("");
+ const rows=all.filter(m=>cmFilter==="all"||(cmFilter==="tech"&&isTech(m))||(cmFilter==="non"&&!isTech(m))||(cmFilter==="many"&&examsOf(m).length>=5))
+  .sort((a,b)=>examsOf(b).length-examsOf(a).length||(isTech(b)-isTech(a))||orderOf[a]-orderOf[b]);
+ document.getElementById("cmtable").innerHTML=`<table class="seq cmt"><thead><tr><th>Subject</th><th>In</th>${EXAMS.map(e=>`<th><button class="lnk cmh ${e.t}" data-exam="${e.id}">${EXS[e.id]}</button></th>`).join("")}</tr></thead><tbody>${rows.map(m=>{const pc=modPct(m),p=Math.round(pc.done*100/pc.total);
+  return `<tr data-cmrow="${m}"><td><button class="lnk cms" data-open="${m}"><span class="sd ${isTech(m)?"tech":"non"}">${isTech(m)?"Tech":"Non-tech"}</span> ${esc(MODS[m].n)}</button><div class="small muted">${pc.total} topics · ${p}% done</div></td><td class="num"><b>${examsOf(m).length}</b></td>${EXAMS.map(e=>{const c=(EXW[e.id]||{})[m];return `<td class="cmv ${c?(c[1]?"est":"on"):""}">${c?esc(c[0]):""}</td>`;}).join("")}</tr>`;}).join("")}</tbody></table>`;
+}
 function renderChips(){document.getElementById("exchips").innerHTML=EXAMS.map(e=>`<button class="chip ${e.t}" data-sel="${e.id}" aria-pressed="${e.id===curExam}">${esc(e.name)}</button>`).join("");}
 function renderSyllabus(){
  renderChips();const e=EXBY[curExam];const i=examInfo(e.id);const p=examPct(e);
@@ -732,7 +787,7 @@ function planDates(t){
  trackMods(t).forEach(m=>{const g=GUIDE[m];const a=acc;acc+=g.w;o[m]={from:addDays(st,Math.round(a*7)),to:addDays(st,Math.round(acc*7)-1)};});
  return{st,weeks:acc,end:addDays(st,Math.round(acc*7)-1),per:o};
 }
-function chips(m){const g=GUIDE[m];return `<span class="gc">#${orderOf[m]}</span>${wtChip(m)}<span class="gc imp-${IMPC[g.imp]}">${esc(g.imp)}</span><span class="gc">${g.w<1?Math.round(g.w*7)+" days":g.w+(g.w===1?" week":" weeks")}</span><span class="gx">${esc(g.d)} · ${esc(g.ty)}</span>`;}
+function chips(m){const g=GUIDE[m];return `<span class="gc">#${orderOf[m]}</span>${wtChip(m)}<span class="gc imp-${IMPC[g.imp]}">${esc(g.imp)}</span><span class="gc">${g.w<1?Math.round(g.w*7)+" days":g.w+(g.w===1?" week":" weeks")}</span><span class="gx">${esc(g.d)} · ${esc(g.ty)}</span><span class="gc inx">In ${examsOf(m).length} of ${EXAMS.length} exams</span>`;}
 function renderGuide(){
  const ae=document.activeElement;if(ae&&ae.closest&&ae.closest("#v-guide")&&ae.tagName==="INPUT")return;
  const t=curTrack;
@@ -792,7 +847,7 @@ function seqHtml(t){
 function setCur(t,m){setPlan({cur:{...(state.plan.cur||{}),[t]:m}});}
 
 let exTableFocus=false;
-function renderAll(){const R={guide:renderGuide,syllabus:renderSyllabus,journal:renderLedger,exams:()=>{if(!exTableFocus)renderExTable();}};(R[curTab]||renderOverview)();}
+function renderAll(){const R={guide:renderGuide,syllabus:renderSyllabus,common:renderCommon,journal:renderLedger,exams:()=>{if(!exTableFocus)renderExTable();}};(R[curTab]||renderOverview)();}
 function renderOverview(){["tech","non"].forEach(t=>{const el=document.getElementById("onow-"+t);if(!(document.activeElement&&el.contains(document.activeElement)&&document.activeElement.tagName==="SELECT"))el.innerHTML=nowHtml(t,"o");});document.getElementById("orev").innerHTML=revHtml(4);renderStats();document.getElementById("osplit").innerHTML=splitHtml(Object.keys(MODS).filter(m=>EXAMS.some(e=>examMods(e).includes(m))),"os");renderCards();renderChart();renderMocks();renderRecent();}
 
 /* ---------------- EVENTS ---------------- */
@@ -810,6 +865,7 @@ document.addEventListener("click",ev=>{
  else if(b.dataset.pin){const [t,m]=b.dataset.pin.split("|");setCur(t,m);}
  else if(b.dataset.rev){const [m,id]=b.dataset.rev.split("|");markRevised(m,id);}
  else if(b.dataset.track){curTrack=b.dataset.track;renderGuide();}
+ else if(b.dataset.cmf){cmFilter=b.dataset.cmf;renderCommon();}
  else if(b.dataset.open){const m=b.dataset.open;const ex=EXAMS.find(e=>e.id===curExam&&examMods(e).includes(m))||EXAMS.find(e=>examMods(e).includes(m));curExam=ex.id;curSrc="";openMods.add(m);renderSyllabus();showTab("syllabus");}
  else if(b.dataset.del){if(b.dataset.confirm){pendingDel=null;delEntry(b.dataset.del);}else{pendingDel=b.dataset.del;renderLedger();setTimeout(()=>{if(pendingDel===b.dataset.del){pendingDel=null;renderLedger();}},4000);}}
 });
@@ -839,7 +895,7 @@ document.getElementById("jform").addEventListener("submit",async ev=>{
 document.getElementById("jDate").value=iso(today());
 fillSelects();syncMock();
 document.addEventListener("toggle",ev=>{const d=ev.target;if(d.dataset&&d.dataset.det){d.open?openNotes.add(d.dataset.det):openNotes.delete(d.dataset.det);}},true);
-const h=(location.hash||"").slice(1);if(["overview","guide","syllabus","journal","exams"].includes(h))showTab(h);
+const h=(location.hash||"").slice(1);if(["overview","guide","syllabus","common","journal","exams"].includes(h))showTab(h);
 renderAll();
 /* ---------------- STORAGE: Firebase sync (own account) or this device ---------------- */
 const m=document.getElementById("mode"),authBtn=document.getElementById("authBtn");
