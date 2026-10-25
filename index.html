@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>Shiva's Exam Journal</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2c4bd1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Exam Journal">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+[hidden]{display:none!important}
+/* Layout: an exam "desk" — tab bar on top; Overview = exam cards + hours chart; Syllabus = topic checklists; Journal = log form + entry ledger. */
+:root{
+ --bg:#eef0f3; --surface:#ffffff; --sunk:#f5f6f8; --fg:#161c26; --muted:#5a6473; --line:#d8dce3;
+ --accent:#2c4bd1; --accent-soft:#e4e9fb; --on-accent:#ffffff;
+ --tech:#a2560c; --tech-soft:#f8ead9; --non:#0b7a6f; --non-soft:#dcf1ee;
+ --ok:#23804a; --ok-soft:#e0f2e7; --warn:#a86b0d; --warn-soft:#fbefd9; --bad:#c0392b; --bad-soft:#fbe4e1;
+ --display:"Bricolage Grotesque","Arial Narrow",Arial,sans-serif;
+ --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+ --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+ --bg:#10141b; --surface:#171c25; --sunk:#131820; --fg:#e6e9ef; --muted:#98a1b0; --line:#2a313d;
+ --accent:#8aa2ff; --accent-soft:#1e2744; --on-accent:#0d1222;
+ --tech:#f0a95e; --tech-soft:#3a2a17; --non:#5fd0c2; --non-soft:#12322f;
+ --ok:#5cc887; --ok-soft:#163323; --warn:#e5b55a; --warn-soft:#3a2d13; --bad:#ef7b6e; --bad-soft:#3d1c19; color-scheme:dark}}
+:root[data-theme="dark"]{
+ --bg:#10141b; --surface:#171c25; --sunk:#131820; --fg:#e6e9ef; --muted:#98a1b0; --line:#2a313d;
+ --accent:#8aa2ff; --accent-soft:#1e2744; --on-accent:#0d1222;
+ --tech:#f0a95e; --tech-soft:#3a2a17; --non:#5fd0c2; --non-soft:#12322f;
+ --ok:#5cc887; --ok-soft:#163323; --warn:#e5b55a; --warn-soft:#3a2d13; --bad:#ef7b6e; --bad-soft:#3d1c19; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1120px;margin:0 auto;padding-block:20px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:20px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.1}
+h1{font-size:2rem;font-weight:800;letter-spacing:-.01em}
+h2{font-size:1.35rem;font-weight:600}
+h3{font-size:1.05rem;font-weight:600}
+.mono,.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:.82rem}
+.label{font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+button,select,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.who{display:grid;gap:2px}
+.mode{font-size:.78rem;padding:3px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.mode.ok{color:var(--ok);border-color:var(--ok)}
+.mode.warn{color:var(--warn);border-color:var(--warn)}
+
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:9px 14px;cursor:pointer;color:var(--muted);font-weight:600;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:2px}
+.stat .v{font-family:var(--mono);font-size:1.5rem;font-weight:600;font-variant-numeric:tabular-nums}
+.stat .s{font-size:.78rem;color:var(--muted)}
+
+.grid-ex{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.excard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:10px;cursor:pointer;text-align:left}
+.excard:hover{border-color:var(--accent)}
+.exhead{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.exname{font-weight:600;font-size:1rem;line-height:1.25}
+.kind{font-size:.68rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.kind.tech{background:var(--tech-soft);color:var(--tech)}
+.kind.non{background:var(--non-soft);color:var(--non)}
+.cd{display:flex;align-items:baseline;gap:6px}
+.cd .d{font-family:var(--mono);font-size:1.6rem;font-weight:600;font-variant-numeric:tabular-nums}
+.cd.urgent .d{color:var(--bad)}
+.cd.soon .d{color:var(--warn)}
+.bar{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;background:var(--accent)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.pill{font-size:.72rem;font-weight:600;padding:2px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill.est{border-style:dashed}
+.pill.st-applied{color:var(--accent);border-color:var(--accent)}
+.pill.st-admit{color:var(--warn);border-color:var(--warn)}
+.pill.st-appeared{color:var(--non);border-color:var(--non)}
+.pill.st-selected{color:var(--ok);border-color:var(--ok);background:var(--ok-soft)}
+.pill.st-dropped{color:var(--muted);text-decoration:line-through}
+
+.two{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:12px;min-width:0;align-content:start}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-family:var(--mono);font-size:10px}
+.mocks{display:grid;gap:10px}
+.mockrow{display:grid;grid-template-columns:minmax(0,1fr) 90px auto;gap:10px;align-items:center}
+.mockrow svg{width:90px;height:26px}
+.empty{color:var(--muted);font-size:.9rem;padding:14px;border:1px dashed var(--line);border-radius:8px;background:var(--sunk)}
+
+/* syllabus */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;cursor:pointer;font-size:.86rem}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.chip.tech[aria-pressed="false"]{border-left:3px solid var(--tech)}
+.chip.non[aria-pressed="false"]{border-left:3px solid var(--non)}
+.stages{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.stage{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--sunk);display:grid;gap:3px}
+.stage b{font-size:.92rem}
+.ovw{display:grid;gap:10px}
+.ovk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.ovk>div{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--sunk);display:grid;gap:2px}
+.ovk b{font-size:1.25rem}
+.ovg{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+.ovc{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:grid;gap:6px;align-content:start;min-width:0;overflow-wrap:anywhere}
+.ovd{display:grid;gap:3px}.ovd .gc{justify-self:start}
+.ovr{display:grid;gap:1px;border-bottom:1px dashed var(--line);padding-bottom:5px}
+.ovt{font-size:.86rem;background:var(--accent-soft);border-radius:6px;padding:6px 9px}
+.gc.imp-ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+@media (max-width:520px){.ovk{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ovsp{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.ovs{border:1px solid var(--line);border-left:4px solid var(--tech);border-radius:8px;padding:9px 12px;display:grid;gap:4px;background:var(--surface)}
+.ovs.non{border-left-color:var(--non)}
+.sd{font-size:.68rem;font-weight:600;padding:0 6px;border-radius:4px;margin-right:2px;white-space:nowrap}
+.sd.tech{background:var(--tech-soft);color:var(--tech)}.sd.non{background:var(--non-soft);color:var(--non)}
+.gx{font-size:.7rem;color:var(--muted);white-space:nowrap;align-self:center;margin:0 4px}
+.gdet{border-top:1px solid var(--line);padding-top:8px}
+.gdet summary{cursor:pointer;font-size:.84rem;font-weight:600;color:var(--accent);list-style:none}
+.gdet summary::-webkit-details-marker{display:none}
+.gdet summary::before{content:"▸ ";display:inline-block;transition:transform .15s}
+.gdet[open] summary::before{content:"▾ "}
+.gdet[open] .gnotes{margin-top:8px}
+.sqp{display:flex;align-items:center;gap:6px}.sqp .bar{width:60px}
+.f.w3{grid-column:span 3}
+@media (max-width:860px){.f.w3{grid-column:1/-1}}
+.syncbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.bkdlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50;padding:16px}
+.bkdlg>div{background:var(--surface);color:var(--fg);border-radius:12px;padding:18px;max-width:420px;width:100%;display:grid;gap:12px}
+.note{font-size:.85rem;color:var(--muted);background:var(--accent-soft);border-radius:8px;padding:9px 12px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.8rem;color:var(--muted);align-items:center}
+.mods{display:grid;gap:8px}
+.mod{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.modhead{display:grid;grid-template-columns:minmax(0,1fr) 120px auto;gap:12px;align-items:center;padding:11px 14px;cursor:pointer;background:none;border:0;width:100%;text-align:left}
+.modhead .t{font-weight:600}
+.modhead .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.tg{font-size:.68rem;padding:1px 6px;border-radius:4px;background:var(--sunk);border:1px solid var(--line);color:var(--muted)}
+.caret{color:var(--muted);transition:transform .15s}
+.mod.open .caret{transform:rotate(90deg)}
+.topics{display:grid;border-top:1px solid var(--line)}
+.topic{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 14px;border-top:1px solid var(--line)}
+.topic:first-child{border-top:0}
+.topic .nm{font-size:.9rem}
+.sbtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 10px;font-size:.75rem;font-weight:600;cursor:pointer;min-width:84px;color:var(--muted)}
+.s1{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.s2{color:var(--ok);border-color:var(--ok);background:var(--ok-soft)}
+.s3{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;border:1px solid var(--line);vertical-align:-1px;margin-right:4px}
+.dot.s1,.dot.s2,.dot.s3{border-width:2px}
+.mt{font-size:.66rem;font-weight:600;padding:1px 6px;border-radius:4px;margin-left:6px;white-space:nowrap;vertical-align:1px}
+.m-yes{background:var(--ok-soft);color:var(--ok)}
+.m-no{background:var(--sunk);color:var(--muted);border:1px dashed var(--line)}
+.m-mine{background:var(--accent-soft);color:var(--accent)}
+.fold{font-size:.68rem;padding:1px 6px;border-radius:4px;background:var(--tech-soft);color:var(--tech)}
+.gc{font-size:.7rem;font-weight:600;padding:1px 7px;border-radius:4px;background:var(--sunk);border:1px solid var(--line);color:var(--fg);white-space:nowrap}
+.imp-bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.imp-warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.imp-non{background:var(--non-soft);color:var(--non);border-color:transparent}
+.imp-muted{color:var(--muted)}
+.gchips{display:flex;flex-wrap:wrap;gap:5px}
+.need{font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid var(--ok);color:var(--ok)}
+.need.low{border-color:var(--bad);color:var(--bad)}
+.phase{display:grid;gap:10px}
+.gcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.gcard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:9px;align-content:start;min-width:0}
+.gnotes{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;margin:0;font-size:.84rem}
+.gnotes dt{font-weight:600;color:var(--muted);font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
+.gnotes dd{margin:0}
+.pyq{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pyq input{width:80px}
+.gsum{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}
+.pill.warnp{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.revrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+.revrow:first-child{border-top:0}
+.revrow .nm{font-size:.9rem}
+.btn.sm{padding:3px 10px;font-size:.8rem}
+.wl{margin:0;padding-left:18px;display:grid;gap:3px;font-size:.86rem}
+.two.eq{grid-template-columns:repeat(2,minmax(0,1fr))}
+.panel.now{border-color:var(--accent);gap:10px}
+.nowsub{display:flex;gap:12px;align-items:center}
+.nowno{font-family:var(--display);font-weight:800;font-size:2rem;color:var(--accent);line-height:1}
+.nowtopic{background:var(--accent-soft);border-radius:8px;padding:10px 12px;display:grid;gap:6px}
+.nowtopic .nm{font-weight:600}
+.panel.now select{width:auto;max-width:100%;font-size:.82rem;padding:4px 6px}
+.gc.wt{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.seqwrap{overflow-x:auto}
+table.seq{width:100%;border-collapse:collapse;font-size:.86rem;min-width:760px}
+table.seq th{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);text-align:left;padding:9px 10px;background:var(--sunk);border-bottom:1px solid var(--line)}
+table.seq td:nth-child(5),table.seq td:nth-child(6),table.seq td:nth-child(8){white-space:nowrap}
+table.seq td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:middle}
+table.seq tr.cur td{background:var(--accent-soft)}
+table.seq td .bar{display:inline-block;vertical-align:middle;margin-right:6px}
+.modtools{display:flex;gap:8px;justify-content:flex-end;padding:8px 14px;border-top:1px solid var(--line);background:var(--sunk)}
+.lnk{background:none;border:0;color:var(--accent);cursor:pointer;font-size:.8rem;padding:2px 4px}
+
+/* journal */
+form.jf{display:grid;gap:12px}
+.fgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.f{display:grid;gap:4px;min-width:0}
+.f.w2{grid-column:span 2}
+.f.w4{grid-column:1/-1}
+.f label{font-size:.75rem;font-weight:600;color:var(--muted)}
+input,select,textarea{width:100%;border:1px solid var(--line);background:var(--sunk);border-radius:7px;padding:7px 9px}
+textarea{min-height:62px;resize:vertical}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);border-radius:8px;padding:8px 16px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.danger{border-color:var(--bad);background:var(--bad);color:var(--surface)}
+.toast{font-size:.85rem;color:var(--ok)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filters select{width:auto}
+.ledger{display:grid;gap:10px}
+.entry{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:8px}
+.entry .meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.entry .date{font-family:var(--mono);font-weight:600}
+.type{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:4px;background:var(--sunk);border:1px solid var(--line)}
+.type.Mock{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.type.Revision{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.type.PYQ{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.score{font-family:var(--mono);font-weight:600}
+.notes3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.notes3 div{font-size:.86rem;min-width:0;overflow-wrap:anywhere}
+.notes3 .label{display:block;margin-bottom:1px}
+.conf{letter-spacing:2px;color:var(--warn);font-size:.85rem}
+.exm{font-size:.82rem;color:var(--muted)}
+.ex-flag{font-size:.68rem;font-weight:600;color:var(--warn);border:1px dashed var(--warn);border-radius:4px;padding:0 6px}
+
+/* exams tab */
+.extable{display:grid;gap:10px}
+.exrow{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;grid-template-columns:minmax(0,1.3fr) 150px 110px 150px minmax(0,1.4fr);gap:12px;align-items:center}
+.exrow .chk{display:flex;gap:6px;align-items:center;font-size:.82rem}
+.exrow .chk input{width:auto}
+.exrow textarea{min-height:38px}
+
+@media (max-width:860px){
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .two{grid-template-columns:minmax(0,1fr)}
+ .fgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .notes3{grid-template-columns:minmax(0,1fr)}
+ .exrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .exrow>.nm,.exrow>.nt{grid-column:1/-1}
+ .modhead{grid-template-columns:minmax(0,1fr) 70px auto}
+ #gplan,.gsum{grid-template-columns:minmax(0,1fr)!important}
+ .gcards{grid-template-columns:minmax(0,1fr)}
+ .two.eq{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+ <header class="top">
+  <div class="who">
+   <span class="label">Shiva Bajpayee · B.Tech Civil 2026 · MP</span>
+   <h1>Exam Journal</h1>
+  </div>
+  <div class="syncbar"><span id="mode" class="mode">Connecting…</span><button class="btn ghost sm" id="authBtn" hidden></button><button class="btn ghost sm" id="bkBtn" title="Download or restore a backup">Backup</button></div>
+ </header>
+
+ <nav class="tabs" role="tablist" aria-label="Sections">
+  <button role="tab" id="t-overview" aria-selected="true" data-tab="overview">Overview</button>
+  <button role="tab" id="t-guide" aria-selected="false" data-tab="guide">Guide</button>
+  <button role="tab" id="t-syllabus" aria-selected="false" data-tab="syllabus">Syllabus</button>
+  <button role="tab" id="t-journal" aria-selected="false" data-tab="journal">Journal</button>
+  <button role="tab" id="t-exams" aria-selected="false" data-tab="exams">Exam dates</button>
+ </nav>
+
+ <!-- OVERVIEW -->
+ <section id="v-overview" class="view" style="display:grid;gap:20px">
+  <div class="stats" id="stats"></div>
+  <div class="two eq"><div class="panel now" id="onow-tech"></div><div class="panel now" id="onow-non"></div></div>
+  <div style="display:grid;gap:10px">
+   <div class="row"><h2>My exams</h2><span class="small muted">Nearest first · tap to open its syllabus</span></div>
+   <div class="grid-ex" id="excards"></div>
+  </div>
+  <div class="panel"><div class="row"><h3>All exams · technical vs non-tech</h3><span class="small muted">Unique subjects across your 11 exams</span></div><div class="ovsp" id="osplit"></div></div>
+  <div class="two">
+   <div class="panel chart"><div class="row"><h3>Study hours, last 28 days</h3><span class="small muted" id="hrsum"></span></div><div id="hrchart"></div></div>
+   <div class="panel"><h3>Mock test scores</h3><div class="mocks" id="mocks"></div></div>
+  </div>
+  <div class="two eq">
+   <div class="panel"><div class="row"><h3>Revise today</h3><button class="lnk" data-go="guide">Open guide →</button></div><div id="orev" style="display:grid;gap:8px"></div></div>
+   <div class="panel"><div class="row"><h3>Recent journal entries</h3><button class="lnk" data-go="journal">Open journal →</button></div><div class="ledger" id="recent"></div></div>
+  </div>
+ </section>
+
+ <!-- GUIDE -->
+ <section id="v-guide" class="view" hidden style="display:grid;gap:18px">
+  <div class="chips" id="gtrack"></div>
+  <div class="panel" id="gplan" style="grid-template-columns:auto minmax(0,1fr);align-items:end;gap:16px"></div>
+  <div class="panel now" id="gnow"></div>
+  <div class="panel" style="padding:0;overflow:hidden;gap:0"><div style="padding:14px 16px;display:grid;gap:2px"><h3>Full sequence, 1st to last</h3><div class="small muted">Order follows what each subject needs first. Civil weightage = approx questions out of 100 in SSC JE Paper 2 (the merit paper). Non-tech = section size in key exams.</div></div><div id="gseq"></div></div>
+  <div class="two">
+   <div class="panel"><h3>Revise today</h3><div id="grev" style="display:grid;gap:8px"></div></div>
+   <div class="panel"><h3>Weak spots</h3><div id="gweak" style="display:grid;gap:4px"></div></div>
+  </div>
+  <div id="gphases" style="display:grid;gap:22px"></div>
+ </section>
+
+ <!-- SYLLABUS -->
+ <section id="v-syllabus" class="view" hidden style="display:grid;gap:16px">
+  <div class="chips" id="exchips"></div>
+  <div id="exinfo" style="display:grid;gap:12px"></div>
+  <div class="legend">
+   <span>Tap a topic's button to change it:</span>
+   <span><i class="dot"></i>Not started</span><span><i class="dot s1"></i>Learning</span><span><i class="dot s2"></i>Done</span><span><i class="dot s3"></i>Revised</span>
+  </div>
+  <div class="row"><div class="chips" id="srcf"></div><span class="small muted">Tags compare each topic with your Study Material folders</span></div>
+  <div class="mods" id="mods"></div>
+ </section>
+
+ <!-- JOURNAL -->
+ <section id="v-journal" class="view" hidden style="display:grid;gap:16px">
+  <div class="panel">
+   <h2>Log a session</h2>
+   <form class="jf" id="jform">
+    <div class="fgrid">
+     <div class="f"><label for="jDate">Date</label><input type="date" id="jDate" required></div>
+     <div class="f"><label for="jHours">Hours studied</label><input type="number" id="jHours" min="0" max="18" step="0.25" placeholder="3.5" required></div>
+     <div class="f"><label for="jType">Type</label><select id="jType"><option>Study</option><option>Revision</option><option value="PYQ">PYQ practice</option><option>Mock</option></select></div>
+     <div class="f"><label for="jExam">Exam</label><select id="jExam"></select></div>
+     <div class="f w2"><label for="jModule">Subject</label><select id="jModule"></select></div>
+     <div class="f w2"><label for="jTopics">Topics covered</label><input id="jTopics" placeholder="e.g. Moment distribution, Kani's method"></div>
+     <div class="f mockf"><label for="jScore">Mock score</label><input type="number" id="jScore" step="0.25" placeholder="142.5"></div>
+     <div class="f mockf"><label for="jTotal">Out of</label><input type="number" id="jTotal" step="1" placeholder="200"></div>
+     <div class="f mockf w2"><label for="jMockName">Mock name / source</label><input id="jMockName" placeholder="e.g. Testbook full mock 7"></div>
+     <div class="f"><label for="jConf">Confidence</label><select id="jConf"><option value="1">1 · Shaky</option><option value="2">2</option><option value="3" selected>3 · Okay</option><option value="4">4</option><option value="5">5 · Strong</option></select></div>
+     <div class="f w3"><label for="jWell">What went well</label><textarea id="jWell" placeholder="Solved 20 RCC PYQs, 17 correct"></textarea></div>
+     <div class="f w2"><label for="jMiss">Mistakes / weak spots</label><textarea id="jMiss" placeholder="Mixed up Lacey and Kennedy silt factor"></textarea></div>
+     <div class="f w2"><label for="jNext">Next step</label><textarea id="jNext" placeholder="Redo canal design formulas tomorrow"></textarea></div>
+    </div>
+    <div class="row"><span class="toast" id="jtoast" aria-live="polite"></span><button class="btn" type="submit">Save entry</button></div>
+   </form>
+  </div>
+  <div class="row"><h2>Entries</h2>
+   <div class="filters"><label class="small muted" for="fExam">Exam</label><select id="fExam"></select><label class="small muted" for="fType">Type</label><select id="fType"><option value="">All</option><option>Study</option><option>Revision</option><option value="PYQ">PYQ practice</option><option>Mock</option></select></div>
+  </div>
+  <div class="ledger" id="ledger"></div>
+ </section>
+
+ <!-- EXAMS -->
+ <section id="v-exams" class="view" hidden style="display:grid;gap:14px">
+  <div class="note">Dates with a dashed tag are my estimates from past cycles. When a notification comes out, put the real date here and tick <b>Confirmed</b>. Always check the official site.</div>
+  <div class="extable" id="extable"></div>
+ </section>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script>
+/* ---------------- SYLLABUS DATA ---------------- */
+const MODS={
+ bm:{n:"Building Materials",g:"civil",folder:"BMC",t:["-Stones: classification, quarrying, dressing, tests","=Bricks: manufacture, classification, tests (IS 1077)","+Masonry: brick and stone bonds, strength","=Lime: types, slaking, hydraulic lime","=Cement: manufacture, Bogue compounds, types (OPC, PPC, PSC, RHC)","=Cement tests: fineness, consistency, setting time, soundness, strength","=Aggregates: classification, grading, fineness modulus, tests","=Concrete: w/c ratio, workability tests (slump, CF, Vee-Bee)","=Concrete mix design (IS 10262), grades, nominal mix","=Admixtures, curing, NDT (rebound hammer, UPV)","=Mortar: types and proportions","=Timber: structure, seasoning, defects, preservation, plywood","-Paints, varnish, distemper","-Metals (steel, aluminium), glass, plastics","-Damp-proofing and waterproofing materials"]},
+ est:{n:"Estimating, Costing & Valuation",g:"civil",folder:"",t:["-Types of estimates (preliminary, plinth area, detailed, revised)","-Long wall–short wall and centre line methods","-Units and modes of measurement (IS 1200)","-Specifications (general, detailed)","-Rate analysis: material, labour, overheads","-Earthwork: roads, canals, embankments (prismoidal, trapezoidal)","-RCC estimation and bar bending schedule","-Valuation: depreciation, sinking fund, years' purchase","-Rent fixation and capitalised value","-Tenders, contracts, EMD, security deposit","-PWD accounts: MB, running bill, imprest"]},
+ surv:{n:"Surveying",g:"civil",folder:"Survey",t:["=Principles and classification of surveying","=Chain surveying: ranging, offsets, errors","=Compass surveying: WCB/QB, local attraction, declination","=Levelling: HI and rise-fall methods","=Curvature, refraction and reciprocal levelling","+Trigonometric levelling","=Contouring: characteristics and methods","=Plane table surveying: methods, resection","=Theodolite: temporary and permanent adjustments","=Traversing: latitude, departure, Bowditch and transit rule","=Tacheometry: stadia and tangential","+Photogrammetry","=Curves: simple, compound, reverse, transition, vertical","=Area and volume: trapezoidal, Simpson's, prismoidal","-Total station, EDM, GPS, remote sensing basics","=Theory of errors and adjustments"]},
+ sm:{n:"Strength of Materials (SOM)",g:"civil",folder:"SOM",t:["-Engineering mechanics: forces, equilibrium, friction","-Centroid and moment of inertia","=Simple stress and strain, elastic constants","+Deformation of bars: tapered bars, self-weight, compound bars","=Thermal stresses, compound bars","=Shear force and bending moment diagrams","=Bending stress in beams (flexure formula)","=Shear stress distribution","=Deflection: double integration, Macaulay's","=Deflection: moment area, conjugate beam","=Torsion of circular shafts","=Columns: Euler and Rankine formulae","=Principal stresses and Mohr's circle","+Transformation of strain, strain rosettes","+Combined stresses: direct + bending, core/kern","-Thin and thick cylinders","-Strain energy and impact loading","=Theories of failure"]},
+ sa:{n:"Structural Analysis",g:"civil",folder:"Structure Analysis",t:["=Static and kinematic indeterminacy, stability","=Trusses: method of joints and sections","=Three-hinged and two-hinged arches","=Cables and suspension bridges","=Influence line diagrams and rolling loads","=Energy methods: unit load, Castigliano","+Force method: consistent deformation, three-moment theorem","=Slope deflection method","=Moment distribution method","-Kani's method","=Matrix methods: flexibility and stiffness basics","=Plastic analysis: collapse load, shape factor","+Structural dynamics: SDOF, natural frequency, damping"]},
+ rcc:{n:"RCC Design (IS 456)",g:"civil",folder:"R.C.C",t:["+Properties of RCC materials: concrete grades, steel, stress-strain","=Working stress method basics","=Limit state method: concepts, partial safety factors","=Singly reinforced rectangular beams","=Doubly reinforced beams","=Flanged (T and L) beams","=Shear, bond, anchorage and development length","+Design for torsion","=One-way slabs","=Two-way slabs","=Short and long columns (axial and eccentric)","=Isolated and combined footings","=Staircase design","=Retaining walls (cantilever, counterfort)","-Water tanks basics","=Prestressed concrete: methods, losses","-Durability, cover, detailing rules"]},
+ steel:{n:"Steel Design (IS 800)",g:"civil",folder:"Steel",t:["=Structural steel properties and rolled sections","=Bolted connections: strength and efficiency","=Welded connections: fillet and butt welds","=Tension members","=Compression members and built-up columns, lacing, battens","=Beams: laterally supported and unsupported","=Plate girders: web, flange, stiffeners","+Gantry girder","-Column bases: slab and gusseted","=Roof trusses and purlins, wind load","=Plastic design of steel structures"]},
+ soil:{n:"Geotechnical Engineering",g:"civil",folder:"Geotechnical engineering",t:["=Origin of soils, three-phase diagram","=Index properties and relationships (e, n, S, G, γ)","=Atterberg limits and consistency","=Soil classification (IS, plasticity chart)","+Soil structure and clay minerals","=Permeability: tests, Darcy's law","+Capillarity in soils","=Seepage and flow nets, quick sand","=Effective stress principle","+Vertical stress: Boussinesq, Westergaard, pressure bulb","=Compaction: Proctor tests, field control","=Consolidation: Terzaghi's theory, Cc, Cv","=Shear strength: Mohr–Coulomb, direct shear, triaxial, vane","=Earth pressure: Rankine and Coulomb","=Stability of slopes","=Bearing capacity: Terzaghi, IS method, plate load test","=Shallow foundations and settlement","=Pile foundations: types, capacity, group action","+Soil stabilisation and foundations on expansive soil","-Soil exploration: boring, sampling, SPT"]},
+ fm:{n:"Fluid Mechanics",g:"civil",folder:"Fluid Mechanics",t:["=Fluid properties: viscosity, surface tension, compressibility","=Pressure measurement and manometers","=Hydrostatic forces on surfaces","=Buoyancy and metacentric height","=Fluid kinematics: types of flow, continuity","=Bernoulli's equation and applications (venturi, pitot)","+Vortex flow and relative equilibrium","=Orifices, mouthpieces, notches and weirs","=Momentum equation and impact of jets","=Flow through pipes: Darcy–Weisbach, minor losses","=Pipes in series and parallel, water hammer","=Laminar and turbulent flow","=Boundary layer theory","+Drag and lift","=Dimensional analysis and model similitude"]},
+ ocf:{n:"Open Channel Flow",g:"civil",folder:"Open Channel Flow",t:["+Open channel properties and types of flow","=Open channel flow: Chezy, Manning, most economical section","=Specific energy, critical flow, hydraulic jump","+Gradually varied flow: GVF equation, profiles","+Rapidly varied flow","+Channel transitions and unsteady flow (surges)"]},
+ hm:{n:"Hydraulic Machines",g:"civil",folder:"Hydraulic machine",t:["+Hydro power plant: layout, heads, efficiencies","+Impact of jet on vanes","=Hydraulic turbines: Pelton, Francis, Kaplan, specific speed","=Hydraulic pumps: centrifugal, reciprocating, NPSH"]},
+ hyd:{n:"Engineering Hydrology",g:"civil",folder:"Hydrology",t:["=Hydrological cycle, precipitation measurement","+Rain gauge network, missing data, mass curve, DAD","=Infiltration and evaporation","+Transpiration and evapotranspiration","=Runoff and its estimation","=Hydrograph and unit hydrograph","=Flood estimation and routing","=Groundwater: aquifers, well hydraulics"]},
+ irr:{n:"Irrigation Engineering",g:"civil",folder:"",t:["-Crop water requirement: duty, delta, base period","-Irrigation methods and efficiencies","-Canal design: Kennedy and Lacey theories","-Canal lining, water logging and drainage","-Cross-drainage works","-Diversion headworks, weirs: Bligh and Khosla","-Gravity dams, earthen dams","-Spillways and energy dissipaters","-River training works"]},
+ trans:{n:"Transportation Engineering",g:"civil",folder:"",t:["-Highway development and planning in India (IRC, road plans)","-Geometric design: cross-section, camber","-Sight distance: SSD, OSD","-Horizontal curves, superelevation, extra widening","-Vertical curves and gradients","-Highway materials and tests (aggregate, bitumen)","-Flexible pavement design (CBR, IRC 37)","-Rigid pavement design (Westergaard)","-Traffic engineering: volume, speed studies, PCU","-Traffic signals, intersections, rotary","-Highway construction and maintenance","-Railway: gauges, rails, sleepers, ballast","-Railway curves, cant, cant deficiency","-Points, crossings, signalling","-Airport, bridges and tunnels basics"]},
+ env:{n:"Environmental Engineering",g:"civil",folder:"",t:["-Water demand, per capita, fluctuations","-Population forecasting methods","-Sources and intake of water","-Water quality: tests and standards (IS 10500)","-Sedimentation and coagulation","-Filtration: slow sand, rapid sand","-Disinfection: chlorination, breakpoint","-Distribution systems and layouts","-Quantity of sewage, storm water","-Sewer design and appurtenances","-Sewage characteristics: BOD, COD, DO","-Primary treatment","-Secondary treatment: ASP, trickling filter","-Sludge treatment, septic tank, oxidation pond","-Solid waste management","-Air and noise pollution"]},
+ const:{n:"Construction Mgmt (CPM)",g:"civil",folder:"CPM",t:["=Foundations and masonry (brick, stone bonds)","-Floors, roofs, stairs","-Doors, windows, lintels, arches","-Plastering, pointing, finishes","-Formwork, scaffolding, shoring","-Construction equipment","+Project management: bar chart, milestone chart","+Network fundamentals: events, activities, dummy, Fulkerson's rule","=CPM network analysis and floats","=PERT and probability","=Crashing, resource levelling","+Network updating","+Engineering economy: interest, depreciation, B/C ratio","-Quality control and safety on site","-Contracts and tendering basics"]},
+
+ quant:{n:"Quantitative Aptitude: Arithmetic",g:"gen",t:["Number system and divisibility","HCF and LCM","Simplification and BODMAS","Square roots, surds and indices","Percentage","Ratio and proportion","Average","Profit, loss and discount","Simple and compound interest","Time and work","Pipes and cisterns","Time, speed and distance","Trains, boats and streams","Mixture and alligation","Partnership","Problems on ages","Permutation, combination, probability"]},
+ advm:{n:"Advanced Maths (SSC/RRB)",g:"gen",t:["Algebra: identities, polynomials","Linear equations","Geometry: lines, angles, triangles","Congruence and similarity","Circles, chords, tangents","Quadrilaterals and polygons","Mensuration 2D","Mensuration 3D","Trigonometric ratios and identities","Heights and distances","Coordinate geometry","Statistics: mean, median, mode, SD","Data interpretation (SSC style)"]},
+ bdi:{n:"Banking Quant: DI & Speed",g:"bank",t:["Simplification and approximation","Number series (missing and wrong)","Quadratic equations and inequalities","Table DI","Bar and line graph DI","Pie chart DI","Caselet DI","Missing / arithmetic DI","Data sufficiency","Quantity comparison"]},
+ reas:{n:"Reasoning: SSC/Railway style",g:"gen",t:["Analogy","Classification (odd one out)","Number and letter series","Coding-decoding","Blood relations","Direction and distance","Order and ranking","Venn diagrams","Syllogism","Mathematical operations","Missing number and matrix","Mirror and water image","Paper folding and cutting","Embedded and counting figures","Dice and cube","Calendar and clock","Statement and conclusion","Basic seating arrangement"]},
+ breas:{n:"Reasoning: Banking style",g:"bank",t:["Floor and flat puzzles","Box and stack puzzles","Day, month, year puzzles","Linear seating arrangement","Circular seating arrangement","Square and rectangular seating","Inequality (direct and coded)","Syllogism (only a few, reverse)","Coding-decoding (new pattern)","Coded blood relations","Coded direction sense","Input-output","Alphanumeric series","Data sufficiency (reasoning)","Critical reasoning: assumption, inference, course of action, argument"]},
+ eng:{n:"English Language",g:"gen",t:["Reading comprehension","Cloze test","Error spotting","Sentence improvement","Fill in the blanks","Para jumbles","Synonyms and antonyms","Idioms and phrases","One-word substitution","Spelling correction","Active and passive voice","Direct and indirect speech","Grammar: tenses, articles, prepositions, subject-verb agreement","Word swap, column and phrase replacement (banking)"]},
+ desc:{n:"Descriptive Writing",g:"bank",t:["Essay writing (economy, banking, social issues)","Formal letter writing","Précis writing","Report and paragraph writing","Email writing (SBI PO)","Situation analysis (SBI PO)","Timed practice with word limits"]},
+ gk:{n:"General Awareness: Static GK",g:"gen",t:["Ancient Indian history","Medieval Indian history","Modern history and freedom struggle","Polity: constitution, articles, schedules, amendments","Parliament, President, judiciary","Indian geography: physical, rivers, soils, climate","World geography","Indian economy basics, five-year plans, NITI Aayog","Art and culture: dances, festivals, music","Books and authors, awards, important days","Sports: trophies, venues, terms","National parks and wildlife sanctuaries","Organisations and their headquarters"]},
+ sci:{n:"General Science",g:"gen",t:["Physics: motion, force, work, energy","Physics: light, sound, heat","Physics: electricity and magnetism","Chemistry: atoms, periodic table, bonding","Chemistry: acids, bases, salts, metals","Chemistry in everyday life, carbon compounds","Biology: cell, tissues, plants","Biology: human body systems","Diseases, nutrition, vitamins","Environment, ecology, pollution","Science and tech: space, defence, IT"]},
+ ca:{n:"Current Affairs",g:"gen",t:["National news (last 6–8 months)","International news","Government schemes and yojanas","Appointments and resignations","Awards and honours","Sports events and winners","Summits, reports and indices","Defence and science news","Union budget and economic survey highlights"]},
+ bank:{n:"Banking & Financial Awareness",g:"bank",t:["History of banking, nationalisation","RBI functions and monetary policy (repo, CRR, SLR)","Types of banks; NABARD, SIDBI, EXIM","Banking terms and instruments","Payment systems: UPI, NEFT, RTGS, IMPS","NPA, Basel norms, SARFAESI, IBC","Financial inclusion schemes (PMJDY etc.)","Insurance and capital markets: SEBI, IRDAI","Recent RBI circulars and bank mergers","Digital banking, fintech and cyber awareness"]},
+ comp:{n:"Computer Knowledge",g:"gen",t:["Computer fundamentals and generations","Hardware: input, output, memory, storage","Software and operating systems","MS Word, Excel, PowerPoint","Internet, email, browsers","Networking basics","DBMS basics","Cyber security, viruses, malware","Shortcuts and abbreviations"]},
+ esi:{n:"Economic & Social Issues",g:"bank",t:["Growth and development, measurement (GDP, HDI)","Indian economy: sectors, inflation, fiscal policy","Poverty and unemployment","Globalisation, WTO, trade","International bodies: IMF, World Bank, ADB","Social structure and demographics","Government policies and social justice","Union budget and economic survey"]},
+ fmgt:{n:"Finance & Management",g:"bank",t:["Financial system and markets","Risk management in banking","Derivatives basics","FinTech and digital banking","Corporate governance","Management: planning, organising, control","Leadership and motivation theories","Communication and HRM basics","Ethics at workplace"]},
+ mpgk:{n:"Madhya Pradesh GK",g:"mp",t:["MP history: ancient to formation (1956)","MP geography: rivers, soils, climate","Forests, minerals, energy","Tribes of MP and their culture","Festivals, art, music and literature","MP economy, agriculture, industries","MP administration and polity","MP government schemes","National parks, sanctuaries, tourism","MP current affairs"]}
+};
+const CIVIL=["bm","est","surv","sm","sa","rcc","steel","soil","fm","ocf","hm","hyd","irr","trans","env","const"];
+
+const EXAMS=[
+ {id:"sscje",name:"SSC JE (Civil)",t:"tech",body:"Staff Selection Commission",
+  stages:[{n:"Paper 1 · CBT (qualifying)",d:"Reasoning 50 · General Awareness 50 · Civil 100 Qs · 200 marks · 2 hrs · −0.25",m:["reas","gk","sci","ca",...CIVIL]},{n:"Paper 2 · CBT (merit)",d:"Civil only · 100 Qs · 300 marks · 2 hrs · −1 per wrong",m:CIVIL},{n:"DV + Medical",d:"Final merit from Paper 2 only",m:[]}],
+  def:{date:"2026-11-02",confirmed:true,label:"Paper 1: 2–6 Nov 2026"},note:"From 2026, Paper 1 is only qualifying and merit is decided by Paper 2 alone. Paper 2 civil weightage drives the Guide order."},
+ {id:"rrbje",name:"RRB JE (Civil)",t:"tech",body:"Railway Recruitment Boards",
+  stages:[{n:"CBT 1",d:"Maths 30 · Reasoning 25 · General Awareness 15 · General Science 30 · 100 Qs · 90 min · −1/3",m:["quant","advm","reas","gk","ca","sci"]},{n:"CBT 2",d:"GA 15 · Physics & Chemistry 15 · Computer 10 · Environment 10 · Technical 100 · 150 Qs · 2 hrs · −1/3",m:["gk","ca","sci","comp","env",...CIVIL]},{n:"DV + Medical",d:"",m:[]}],
+  def:{date:"",confirmed:false,label:"CEN 04/2026 · 4,029 posts · applied 14 Aug–13 Sep 2026 · CBT 1 date TBA"},note:"CBT 1 is qualifying only. CBT 2 decides merit, so the civil part matters most."},
+ {id:"mppscae",name:"MPPSC AE (State Engineering Services)",t:"tech",body:"MP Public Service Commission",
+  stages:[{n:"Written · Part A",d:"General Knowledge (MP, India, World) · 50 Qs · 150 marks",m:["gk","mpgk","ca","sci"]},{n:"Written · Part B",d:"Civil Engineering · 100 Qs · 300 marks · English only",m:CIVIL},{n:"Interview",d:"50 marks · total 500",m:[]}],
+  def:{date:"2027-03-21",confirmed:false,label:"Notification expected ~Dec 2026, exam ~Mar 2027"},note:"One 3-hour OMR paper with both parts. −1 mark per wrong answer. Recheck the official notification."},
+ {id:"mpesb",name:"MPESB Sub Engineer (Group 3)",t:"tech",body:"MP Employees Selection Board",
+  stages:[{n:"Single CBT · Part A",d:"100 marks: GK, General Hindi, English, Maths, Reasoning, Science, Computer",m:["gk","mpgk","eng","quant","reas","sci","comp"]},{n:"Single CBT · Part B",d:"100 marks: Civil technical · 200 Qs total · 3 hrs",m:CIVIL},{n:"Document verification",d:"",m:[]}],
+  def:{date:"2026-10-07",confirmed:true,label:"Group-3 (Second) 2026 · exam from 7 Oct 2026"},note:"General Hindi is also in Part A; it is not tracked here. The 2026 exam has started, so update your status in Exam dates."},
+ {id:"mpdept",name:"MP dept JE/AE drives",t:"tech",body:"MP PWD, WRD, PHED, MPPKVVCL",
+  stages:[{n:"Written test",d:"Mostly civil technical + MP GK",m:[...CIVIL,"mpgk","gk"]}],
+  def:{date:"",confirmed:false,label:"Irregular drives"},note:"Track each department's site. Same civil prep as SSC JE."},
+ {id:"fcije",name:"FCI JE (Civil)",t:"tech",body:"Food Corporation of India",
+  stages:[{n:"CBT",d:"Civil technical + reasoning, numerical aptitude, general awareness, computer",m:[...CIVIL,"reas","quant","gk","ca","comp"]},{n:"Document verification",d:"",m:[]}],
+  def:{date:"",confirmed:false,label:"No 2026 notification yet"},note:"Comes every 2–3 years. Civil prep for SSC JE covers most of it."},
+ {id:"cgl",name:"SSC CGL",t:"non",body:"Staff Selection Commission",
+  stages:[{n:"Tier 1 · CBT",d:"Reasoning 25 · GA 25 · Quant 25 · English 25 · 60 min · qualifying",m:["reas","gk","ca","sci","quant","advm","eng"]},{n:"Tier 2 · CBT",d:"Maths 30 · Reasoning 30 · English 45 · GA 25 · Computer 20 · DEST typing (some posts)",m:["quant","advm","reas","eng","gk","ca","comp"]},{n:"DV",d:"",m:[]}],
+  def:{date:"2027-06-01",confirmed:false,label:"2027 notification ~Mar 2027"},note:"Typing test (DEST) applies only to some posts."},
+ {id:"ntpc",name:"RRB NTPC (Graduate)",t:"non",body:"Railway Recruitment Boards",
+  stages:[{n:"CBT 1",d:"GA 40 · Maths 30 · Reasoning 30 · 90 min",m:["gk","ca","sci","quant","advm","reas"]},{n:"CBT 2",d:"GA 50 · Maths 35 · Reasoning 35 · 90 min",m:["gk","ca","sci","quant","advm","reas"]},{n:"Typing / CBAT, DV, Medical",d:"Depends on post",m:[]}],
+  def:{date:"",confirmed:false,label:"Check rrbapply.gov.in"},note:"GA has the most weight. Static GK and science are key."},
+ {id:"ibps",name:"IBPS PO / Clerk",t:"non",body:"Institute of Banking Personnel Selection",
+  stages:[{n:"Prelims",d:"Quant 35 Qs (30 marks) · Reasoning 35 (40) · English 30 (30) · 60 min",m:["eng","bdi","quant","breas"]},{n:"Mains",d:"Reasoning 40 · GA/Banking/Digital 35 · English 35 · DA&I 35 · Descriptive 25 marks",m:["breas","bdi","quant","eng","bank","ca","desc"]},{n:"Interview (PO only)",d:"",m:[]}],
+  def:{date:"2027-08-15",confirmed:false,label:"PO prelims usually Aug"},note:"Revised pattern from 2025. Clerk has no interview. Puzzles and DI decide the cutoff."},
+ {id:"sbi",name:"SBI PO / Clerk",t:"non",body:"State Bank of India",
+  stages:[{n:"Prelims",d:"English 40 · Quant 30 · Reasoning 30 · 60 min",m:["eng","bdi","quant","breas"]},{n:"Mains",d:"Reasoning & Computer · DA&I · GA/Banking · English + Descriptive 50 marks (email, report, précis)",m:["breas","bdi","quant","eng","bank","ca","comp","desc"]},{n:"Psychometric + GE + Interview (PO)",d:"",m:[]}],
+  def:{date:"",confirmed:false,label:"Watch sbi.bank.in careers"},note:"SBI Clerk prelims/mains has no interview."},
+ {id:"rbi",name:"RBI Grade B / Assistant",t:"non",body:"Reserve Bank of India",
+  stages:[{n:"Grade B Phase 1",d:"GA 80 · English 30 · Quant 30 · Reasoning 60 · 200 marks",m:["gk","ca","bank","eng","quant","bdi","breas"]},{n:"Grade B Phase 2",d:"ESI 100 · English descriptive 100 · Finance & Management 100",m:["esi","fmgt","eng","desc"]},{n:"Assistant prelims + mains, LPT",d:"Bank-style quant, reasoning, English, GA, computer",m:["comp"]},{n:"Interview (Grade B)",d:"75 marks",m:[]}],
+  def:{date:"",confirmed:false,label:"Grade B notification usually mid-year"},note:"Assistant has a language proficiency test in Hindi for MP."}
+];
+const STATUS=[["prep","Preparing"],["applied","Form filled"],["admit","Admit card out"],["appeared","Appeared"],["selected","Selected"],["dropped","Skipping"]];
+const TSTATE=["Not started","Learning","Done","Revised"];
+const EXBY=Object.fromEntries(EXAMS.map(e=>[e.id,e]));
+const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,48);
+for(const k in MODS){const M=MODS[k];M.src=M.t.map(x=>"=-+".includes(x[0])?x[0]:"");M.t=M.t.map(x=>"=-+".includes(x[0])?x.slice(1):x);M.ids=M.t.map(slug);}
+const SRC={"=":["Match","m-yes"],"-":["No match","m-no"],"+":["My material","m-mine"]};
+/* ---------------- GUIDE DATA ---------------- */
+/* My estimates. wt = approx Qs of 100 in SSC JE Paper 2 (merit paper from 2026), wtx = weightage text. d=depth, ty=type, w=weeks, imp=importance, grp=group, needs=[[module,why]], why=why this order, focus, trap, pyq=tip, tgt=PYQ target */
+const TRACKS={
+ tech:{n:"Technical (Civil)",phases:[
+  {n:"Phase 1 · Structures",note:"One chain. Each subject uses the last one's tools. Low SSC weight, but the base for half the syllabus.",m:["sm","sa","rcc","steel"]},
+  {n:"Phase 2 · Building & Estimation",note:"Biggest SSC JE Paper 2 block (~26 Qs). Estimation uses BMC and RCC.",m:["bm","est"]},
+  {n:"Phase 3 · Soil",note:"~10 Qs. Uses stress ideas from SOM.",m:["soil"]},
+  {n:"Phase 4 · Water & Fluids",note:"~19 Qs together. Fluid basics first, then channels, machines, then water resources.",m:["fm","ocf","hm","hyd","irr"]},
+  {n:"Phase 5 · Field & public works",note:"~25 Qs. Mostly standalone, formula and fact based.",m:["surv","trans","env","const"]}]},
+ non:{n:"Non-technical",phases:[
+  {n:"Phase 1 · Core maths & reasoning",note:"Every non-tech exam is built on these. Speed comes later, concepts first.",m:["quant","advm","reas"]},
+  {n:"Phase 2 · Language",note:"Grammar rules first, then RC and vocab daily.",m:["eng"]},
+  {n:"Phase 3 · General awareness",note:"Static GK and science once properly, current affairs daily alongside everything.",m:["gk","sci","ca","comp"]},
+  {n:"Phase 4 · Banking level",note:"Only after Phase 1. These are harder versions of the same skills.",m:["bdi","breas","bank","desc"]},
+  {n:"Phase 5 · Exam-specific",note:"Only for the exams that need them.",m:["mpgk","esi","fmgt"]}]}
+};
+const GUIDE={
+ sm:{d:"Full",ty:"Heavy numerical",w:2,imp:"Critical",wt:3,wtx:"~3 of 100 Qs in SSC JE Paper 2, but the base for TOS, RCC, Steel and Soil",grp:"Structural",needs:[],why:"Base of all structural subjects. SFD/BMD, bending and deflection are used again in TOS, RCC and Steel.",focus:"SFD/BMD, bending and shear stress, deflection, Mohr's circle, torsion, columns.",trap:"Sign conventions in SFD/BMD and Mohr's circle. Units of E and I.",pyq:"SSC JE repeats elastic constants, Euler load and max deflection formulas. Make a formula sheet.",tgt:150},
+ sa:{d:"Full",ty:"Heavy numerical",w:2,imp:"High",wt:3,wtx:"~3 of 100 Qs in SSC JE Paper 2 (SOM + TOS ≈ 6)",grp:"Structural",needs:[["sm","SFD/BMD, deflection methods, strain energy"]],why:"Uses SOM tools to solve bigger structures. Learn it right after SOM while they are fresh.",focus:"Indeterminacy, trusses, ILD, slope deflection, moment distribution, arches.",trap:"Counting degree of indeterminacy. Carry-over factor and distribution factor mix-ups.",pyq:"Indeterminacy and ILD questions come almost every year. Practice 20 of each.",tgt:120},
+ rcc:{d:"Full",ty:"Heavy numerical",w:2,imp:"Critical",wt:7,wtx:"~7 of 100 Qs in SSC JE Paper 2",grp:"Structural",needs:[["sm","bending stress, shear stress"],["sa","BM in beams and slabs"]],why:"Design needs analysis first. Once you can find BM and SF, RCC is just IS 456 rules on top.",focus:"LSM beams (xu,max, MoR), shear, development length, slabs, columns, footings, IS 456 clauses.",trap:"Fe415 vs Fe500 values (xu,max/d = 0.48 vs 0.46). Mixing WSM and LSM formulas.",pyq:"Clause-based theory questions are frequent. Note every IS 456 number you see in PYQs.",tgt:150},
+ steel:{d:"Selective",ty:"Mixed",w:1.5,imp:"High",wt:7,wtx:"~7 of 100 Qs in SSC JE Paper 2",grp:"Structural",needs:[["sm","columns, bending"],["rcc","design approach and LSM"]],why:"Same design logic as RCC with IS 800. Easier after RCC.",focus:"Bolted and welded connections, tension and compression members, beams, plate girder.",trap:"Effective length factors and gross vs net area.",pyq:"Connections and slenderness ratio limits are the most asked.",tgt:80},
+ fm:{d:"Full",ty:"Heavy numerical",w:1.5,imp:"High",wt:6,wtx:"~6 of 100 Qs in SSC JE Paper 2 (FM group ≈ 9)",grp:"Water & Fluid",needs:[],why:"Base of the whole water group. Bernoulli, continuity and pipe flow are used in every later subject.",focus:"Properties, statics, Bernoulli, flow measurement, pipe losses, boundary layer, dimensional analysis.",trap:"Gauge vs absolute pressure. Laminar vs turbulent friction factor.",pyq:"Manometer and pipe-loss numericals repeat a lot. Learn dimensionless numbers by heart.",tgt:120},
+ ocf:{d:"Selective",ty:"Heavy numerical",w:0.5,imp:"Medium",wt:2,wtx:"~2 of 100 Qs in SSC JE Paper 2",grp:"Water & Fluid",needs:[["fm","energy equation, flow types"]],why:"Fluid mechanics applied to channels. Needs Bernoulli and energy ideas.",focus:"Manning/Chezy, most economical section, specific energy, critical depth, hydraulic jump, GVF profiles.",trap:"Critical depth formulas for rectangular vs other sections.",pyq:"Hydraulic jump and economical section are asked every cycle.",tgt:50},
+ hm:{d:"Selective",ty:"Light numerical",w:0.5,imp:"Low",wt:1,wtx:"~1 of 100 Qs in SSC JE Paper 2",grp:"Water & Fluid",needs:[["fm","momentum equation, impact of jets"]],why:"Momentum and energy from FM applied to turbines and pumps.",focus:"Impact of jet, turbine types, specific speed, pump heads, NPSH, cavitation.",trap:"Specific speed formula for turbine vs pump.",pyq:"Mostly formula and type-matching questions. Quick marks.",tgt:40},
+ hyd:{d:"Selective",ty:"Light numerical",w:1,imp:"Medium",wt:5,wtx:"~5 of 100 Qs in SSC JE Paper 2 (Hydrology + Irrigation ≈ 10)",grp:"Water & Fluid",needs:[["fm","basic flow ideas"]],why:"Where the water comes from. Needed before irrigation.",focus:"Precipitation, infiltration indices, runoff, unit hydrograph, well hydraulics.",trap:"φ-index vs W-index. Units in unit hydrograph.",pyq:"Rain gauge and unit hydrograph numericals are standard.",tgt:50},
+ irr:{d:"Selective",ty:"Light numerical",w:1,imp:"Medium",wt:5,wtx:"~5 of 100 Qs in SSC JE Paper 2",grp:"Water & Fluid",needs:[["hyd","runoff, water availability"],["ocf","channel design"]],why:"Uses hydrology for supply and OCF for canal design.",focus:"Duty-delta, Kennedy and Lacey, cross-drainage works, Khosla, dams.",trap:"Kennedy CVR vs Lacey silt factor.",pyq:"Duty-delta relation is asked almost every year.",tgt:50},
+ soil:{d:"Full",ty:"Heavy numerical",w:2,imp:"Critical",wt:10,wtx:"~10 of 100 Qs in SSC JE Paper 2",grp:"Soil",needs:[["sm","stress and Mohr's circle"]],why:"Uses stress ideas from SOM. Seepage only needs Darcy's law, which is taught inside soil itself.",focus:"Phase relations, classification, permeability, consolidation, shear strength, earth pressure, bearing capacity.",trap:"Phase relation formulas (e, n, S, w). Rankine active vs passive.",pyq:"Phase relation numericals in every paper. Do 40 of them.",tgt:150},
+ bm:{d:"Full",ty:"Pure theory",w:2,imp:"Critical",wt:16,wtx:"~16 of 100 Qs in SSC JE Paper 2 (BMC + construction technology) · highest",grp:"Building",needs:[],why:"Highest weightage in SSC JE Paper 2. Mostly memory, so revise it again in the last month.",focus:"Cement tests and types, bricks, timber, concrete tests, admixtures.",trap:"Setting times and test values (Vicat, Le-Chatelier). Brick class strengths.",pyq:"SSC JE asks 10+ BMC questions. PYQs cover most of them.",tgt:150},
+ surv:{d:"Full",ty:"Light numerical",w:1.5,imp:"Critical",wt:11,wtx:"~11 of 100 Qs in SSC JE Paper 2",grp:"Surveying",needs:[],why:"Stands alone. Light numericals, high scoring.",focus:"Levelling, compass bearings, theodolite, traversing, curves, tacheometry.",trap:"WCB to QB conversions. Curvature and refraction correction signs.",pyq:"Bearing and levelling numericals repeat. Learn instrument parts.",tgt:100},
+ env:{d:"PYQs focus",ty:"Pure theory",w:1.5,imp:"High",wt:6,wtx:"~6 of 100 Qs in SSC JE Paper 2 · plus 10 separate Qs in RRB JE CBT 2",grp:"Environmental",needs:[],why:"Mostly theory and standards. Good scorer, revise near exam.",focus:"Water demand, treatment units, BOD, sewer design, sewage treatment.",trap:"BOD formula and IS 10500 limits.",pyq:"Standard values and treatment-unit facts are asked often.",tgt:100},
+ const:{d:"Skim only",ty:"Light numerical",w:0.5,imp:"Low",wt:0,wtx:"0–2 Qs in SSC JE Paper 2 (sometimes inside BMC)",grp:"Management",needs:[],why:"Short and logical. CPM/PERT are easy numerical marks.",focus:"Network rules, CPM floats, PERT probability, crashing.",trap:"Total float vs free float vs independent float.",pyq:"Float and PERT expected time questions repeat.",tgt:50},
+ est:{d:"Full",ty:"Light numerical",w:1,imp:"Critical",wt:10,wtx:"~10 of 100 Qs in SSC JE Paper 2",grp:"Management",needs:[["bm","materials and units"],["rcc","bar bending, concrete quantities"]],why:"Needs materials from BMC and RCC detailing. ~10 Qs in SSC JE Paper 2.",focus:"Types of estimates, IS 1200 units, rate analysis, valuation.",trap:"Units of measurement for each item.",pyq:"Units and estimate types are classic one-liners.",tgt:50},
+ trans:{d:"PYQs focus",ty:"Mixed",w:1.5,imp:"High",wt:8,wtx:"~8 of 100 Qs in SSC JE Paper 2",grp:"Transportation",needs:[],why:"~8 Qs in SSC JE Paper 2. Formula heavy, so learn it after the core numerical subjects.",focus:"Sight distance, superelevation, pavement design basics, railway gauge and cant.",trap:"SSD formula units (km/h vs m/s).",pyq:"SSD and superelevation formulas are enough for most questions.",tgt:60},
+
+ quant:{d:"Full",ty:"Heavy numerical",w:4,imp:"Critical",wt:null,wtx:"CGL Tier 2 Maths 30 Qs (90 marks, with Adv Maths) · NTPC CBT 2 Maths 35 of 120 · IBPS PO Pre 35 Qs",grp:"Quant",needs:[],why:"Every exam has it. Percentage and ratio are used in almost every other chapter.",focus:"Percentage, ratio, average, profit-loss, interest, time-work, TSD.",trap:"Successive percentage changes. Relative speed direction.",pyq:"Learn tables to 30, squares to 50, cubes to 25 first. Saves minutes.",tgt:400},
+ advm:{d:"Full",ty:"Heavy numerical",w:3,imp:"High",wt:null,wtx:"About half of SSC/RRB maths: algebra, geometry, trig, mensuration",grp:"Quant",needs:[["quant","arithmetic speed"]],why:"SSC and RRB heavy. Needs arithmetic comfort first.",focus:"Algebra identities, geometry theorems, trigonometry, mensuration.",trap:"Geometry properties of triangle centres. Trig value tables.",pyq:"SSC CGL repeats algebra and trig patterns. Do previous years shift-wise.",tgt:300},
+ reas:{d:"Full",ty:"Mixed",w:3,imp:"Critical",wt:null,wtx:"CGL Tier 2 30 Qs (90 marks) · NTPC CBT 2 35 of 120 · RRB JE CBT 1 25 Qs",grp:"Reasoning",needs:[],why:"Quick to learn and high scoring. Practise alongside quant.",focus:"Series, coding, analogy, blood relations, syllogism, non-verbal.",trap:"Syllogism 'some' and 'all' cases. Mirror image direction.",pyq:"Speed matters more than concepts. Time every set.",tgt:400},
+ eng:{d:"Full",ty:"Pure theory",w:4,imp:"Critical",wt:null,wtx:"CGL Tier 2 45 Qs (135 marks, biggest module) · SBI PO Pre 40 Qs · IBPS PO Pre 30 Qs",grp:"English",needs:[],why:"Takes the longest to improve, so start early and do a little daily.",focus:"Grammar rules, error spotting, RC, cloze, vocab.",trap:"Subject-verb agreement and tense errors.",pyq:"Read one editorial a day. Keep a vocab notebook from PYQs.",tgt:300},
+ gk:{d:"PYQs focus",ty:"Pure theory",w:3,imp:"Critical",wt:null,wtx:"NTPC CBT 2 GA 50 of 120 (biggest) · CGL Tier 2 25 Qs · RBI Gr B Ph 1 GA 80 Qs",grp:"General Awareness",needs:[],why:"Big syllabus. Learn from PYQs first, then fill gaps.",focus:"Polity, history, geography, economy, static GK.",trap:"Article numbers and dates. Read twice, revise often.",pyq:"Many SSC GK questions repeat. Do 10 years of PYQs.",tgt:400},
+ sci:{d:"PYQs focus",ty:"Pure theory",w:2,imp:"High",wt:null,wtx:"RRB JE CBT 1 30 Qs · part of NTPC GA",grp:"General Awareness",needs:[],why:"RRB gives it big weight. Class 10 NCERT level.",focus:"Physics basics, chemistry in daily life, human body, diseases.",trap:"Units and SI prefixes. Vitamins and deficiency diseases.",pyq:"NCERT class 9–10 science covers most questions.",tgt:200},
+ ca:{d:"Selective",ty:"Pure theory",w:1,imp:"High",wt:null,wtx:"Inside every GA section. Then 30 min daily",grp:"General Awareness",needs:[],why:"Never finished. Do 30 minutes daily from day one.",focus:"Last 6–8 months: schemes, awards, sports, appointments, reports.",trap:"Mixing up similar names and numbers. Revise monthly.",pyq:"Use one monthly capsule. Do not chase many sources.",tgt:300},
+ comp:{d:"Selective",ty:"Pure theory",w:1,imp:"Medium",wt:null,wtx:"CGL Tier 2 20 Qs (60 marks) · RRB JE CBT 2 10 Qs · SBI PO Mains (with reasoning)",grp:"General Awareness",needs:[],why:"Small and easy. Needed for RRB CBT 2, CGL Tier 2 and bank mains.",focus:"Fundamentals, MS Office, internet, networking, shortcuts.",trap:"Abbreviations and shortcut keys.",pyq:"Questions repeat a lot. 2–3 days of PYQs is enough.",tgt:100},
+ bdi:{d:"Full",ty:"Heavy numerical",w:2,imp:"Critical",wt:null,wtx:"IBPS PO Mains DA&I 35 Qs (50 marks) · SBI PO Mains DA&I 30 Qs",grp:"Banking",needs:[["quant","percentage, ratio, averages"]],why:"Bank DI is arithmetic at speed. Start only after quant basics.",focus:"Simplification, approximation, series, quadratic, all DI types.",trap:"Calculation speed. Use approximation, not exact values.",pyq:"Do 2 DI sets daily with a timer.",tgt:300},
+ breas:{d:"Full",ty:"Mixed",w:3,imp:"Critical",wt:null,wtx:"IBPS PO Pre 35 Qs (40 marks) · IBPS Mains 40 Qs (60 marks) · RBI Gr B Ph 1 60 Qs",grp:"Banking",needs:[["reas","basic reasoning types"]],why:"Puzzles decide bank cutoffs. Needs the basics first.",focus:"Puzzles, seating arrangement, inequality, syllogism, coding.",trap:"Spending too long on one puzzle. Skip and come back.",pyq:"Solve 3 puzzles daily. Mix floor, box and seating.",tgt:300},
+ bank:{d:"Selective",ty:"Pure theory",w:1,imp:"High",wt:null,wtx:"IBPS PO Mains GA 35 Qs (50 marks) · SBI PO Mains GA 60 Qs",grp:"Banking",needs:[["ca","current affairs habit"]],why:"Static banking facts plus recent RBI news. Builds on your CA habit.",focus:"RBI tools, banking terms, payment systems, financial bodies.",trap:"Repo vs reverse repo vs MSF. CRR vs SLR.",pyq:"Make a one-page sheet of rates and terms.",tgt:150},
+ desc:{d:"Selective",ty:"Pure theory",w:1,imp:"Medium",wt:null,wtx:"IBPS PO 25 marks · SBI PO 50 marks · RBI Gr B English 100 marks",grp:"Banking",needs:[["eng","grammar and writing"]],why:"Only SBI PO mains and RBI Gr B. Do it after English basics.",focus:"Essay and letter formats, timed writing.",trap:"Going over the word limit.",pyq:"Write one essay and one letter a week near the exam.",tgt:20},
+ mpgk:{d:"PYQs focus",ty:"Pure theory",w:1.5,imp:"High",wt:null,wtx:"MPPSC AE Part A 50 Qs (150 of 450 marks) · MPESB Part A GK",grp:"State (MP)",needs:[["gk","general static GK"]],why:"Needed for MPPSC AE and MPESB too. Builds on static GK.",focus:"MP history, geography, tribes, schemes, current affairs.",trap:"District and river names. New schemes change yearly.",pyq:"MPPSC and MPESB PYQs repeat MP facts a lot.",tgt:150},
+ esi:{d:"Selective",ty:"Pure theory",w:2,imp:"Medium",wt:null,wtx:"RBI Gr B Phase 2 paper, 100 marks",grp:"RBI",needs:[["gk","economy basics"]],why:"Only for RBI Grade B Phase 2.",focus:"Growth, inflation, budget, social issues, global bodies.",trap:"Mixing old and new data. Use latest survey.",pyq:"Read Economic Survey summary.",tgt:50},
+ fmgt:{d:"Selective",ty:"Pure theory",w:2,imp:"Medium",wt:null,wtx:"RBI Gr B Phase 2 paper, 100 marks",grp:"RBI",needs:[["bank","banking basics"]],why:"Only for RBI Grade B Phase 2.",focus:"Financial markets, risk, management and motivation theories.",trap:"Theory names and authors.",pyq:"Make a table of theories and who gave them.",tgt:50}
+};
+const IMPC={Critical:"bad",High:"warn",Medium:"non",Low:"muted"};
+const trackOf=m=>TRACKS.tech.phases.some(p=>p.m.includes(m))?"tech":"non";
+const orderOf=(()=>{const o={};for(const t in TRACKS){let i=1;TRACKS[t].phases.forEach(p=>p.m.forEach(m=>o[m]=i++));}return o;})();
+
+const examMods=e=>[...new Set(e.stages.flatMap(s=>s.m))];
+const modStages=(e,m)=>e.stages.filter(s=>s.m.includes(m)).map(s=>s.n);
+
+/* ---------------- STATE + STORE ---------------- */
+const state={exams:{},progress:{},journal:[],dates:{},revs:{},plan:{techStart:"",nonStart:"",pyq:{},cur:{}}};
+let db=null, mode="loading";
+const LKEY="shiva-exam-journal-v1";
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function saveLocal(){if(mode!=="local")return;try{localStorage.setItem(LKEY,JSON.stringify(state));}catch(e){}}
+function loadLocal(){try{const s=JSON.parse(localStorage.getItem(LKEY)||"null");if(s){state.exams=s.exams||{};state.progress=s.progress||{};state.journal=s.journal||[];state.dates=s.dates||{};state.revs=s.revs||{};state.plan={techStart:"",nonStart:"",pyq:{},cur:{},...(s.plan||{})};}}catch(e){}}
+const ptimers={};
+function applyTopic(mod,id,v){
+ const m=state.progress[mod]||(state.progress[mod]={}),d=state.dates[mod]||(state.dates[mod]={}),r=state.revs[mod]||(state.revs[mod]={});
+ const prev=m[id]||0;
+ if(v)m[id]=v;else delete m[id];
+ if(v===2&&prev<2){d[id]=iso(today());r[id]=0;}
+ else if(v===3&&prev===2){d[id]=iso(today());r[id]=Math.min(3,(r[id]||0)+1);}
+ else if(v<2){delete d[id];delete r[id];}
+}
+function saveMod(mod){
+ renderAll();
+ if(mode==="db"){clearTimeout(ptimers[mod]);ptimers[mod]=setTimeout(()=>{db.doc("progress/"+mod).set({s:{...(state.progress[mod]||{})},d:{...(state.dates[mod]||{})},r:{...(state.revs[mod]||{})}}).catch(err).finally(()=>{delete ptimers[mod];});},700);}
+ else saveLocal();
+}
+function setTopic(mod,id,v){applyTopic(mod,id,v);saveMod(mod);}
+function setExam(id,patch){
+ const cur={...examInfo(id),...patch};
+ const rec={date:cur.date||"",confirmed:!!cur.confirmed,status:cur.status||"prep",notes:cur.notes||""};
+ state.exams[id]=rec;renderAll();
+ if(mode==="db")db.doc("exams/"+id).set(rec).catch(err);else saveLocal();
+}
+async function addEntry(e){
+ if(mode==="db"){await db.collection("journal").add(e);}
+ else{state.journal.push({id:"l"+Date.now(),...e});saveLocal();renderAll();}
+}
+function delEntry(id){
+ if(mode==="db")db.doc("journal/"+id).delete().catch(err);
+ else{state.journal=state.journal.filter(j=>j.id!==id);saveLocal();renderAll();}
+}
+function err(e){const m=document.getElementById("mode");m.textContent="Save failed: "+(e&&e.code||"error");m.className="mode warn";}
+function examInfo(id){const d=EXBY[id].def;const s=state.exams[id]||{};return{date:s.date!==undefined?s.date:d.date,confirmed:s.confirmed!==undefined?s.confirmed:d.confirmed,status:s.status||"prep",notes:s.notes||"",label:d.label,custom:!!state.exams[id]};}
+
+/* ---------------- HELPERS ---------------- */
+const today=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate());};
+const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const parse=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d);};
+const daysTo=s=>s?Math.round((parse(s)-today())/864e5):null;
+const fmtDate=s=>s?parse(s).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}):"";
+function modPct(mod){const m=state.progress[mod]||{};const ids=MODS[mod].ids;let d=0,l=0;ids.forEach(i=>{const v=m[i]||0;if(v>=2)d++;else if(v===1)l++;});return{done:d,learn:l,total:ids.length};}
+function examPct(e){let d=0,t=0;examMods(e).forEach(m=>{const p=modPct(m);d+=p.done;t+=p.total;});return t?Math.round(d*100/t):0;}
+const sortedJournal=()=>[...state.journal].sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.createdAt||0)-(a.createdAt||0));
+
+/* ---------------- RENDER ---------------- */
+let curTab="overview", curExam="sscje", curSrc="";
+const openMods=new Set();
+function showTab(t){curTab=t;document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));document.querySelectorAll(".view").forEach(v=>v.hidden=v.id!=="v-"+t);try{history.replaceState(null,"","#"+t);}catch(e){}window.scrollTo(0,0);renderAll();}
+
+function renderStats(){
+ const t=today();const wk=new Date(t);wk.setDate(t.getDate()-6);
+ const J=state.journal;let week=0,total=0;const days=new Set();
+ J.forEach(j=>{const h=+j.hours||0;total+=h;if(j.date&&parse(j.date)>=wk)week+=h;if(h>0&&j.date)days.add(j.date);});
+ let streak=0;const c=new Date(t);if(!days.has(iso(c)))c.setDate(c.getDate()-1);while(days.has(iso(c))){streak++;c.setDate(c.getDate()-1);}
+ let ad=0,at=0;const all=new Set();EXAMS.forEach(e=>examMods(e).forEach(m=>all.add(m)));all.forEach(m=>{const p=modPct(m);ad+=p.done;at+=p.total;});
+ const next=EXAMS.map(e=>({e,d:daysTo(examInfo(e.id).date)})).filter(x=>x.d!==null&&x.d>=0&&examInfo(x.e.id).status!=="dropped").sort((a,b)=>a.d-b.d)[0];
+ document.getElementById("stats").innerHTML=
+ `<div class="stat"><span class="label">Next exam</span><span class="v">${next?next.d+"d":"—"}</span><span class="s">${next?esc(next.e.name):"No dates set"}</span></div>
+  <div class="stat"><span class="label">This week</span><span class="v">${week.toFixed(1)}h</span><span class="s">${total.toFixed(1)}h logged in total</span></div>
+  <div class="stat"><span class="label">Streak</span><span class="v">${streak}d</span><span class="s">Days in a row with study logged</span></div>
+  <div class="stat"><span class="label">Syllabus done</span><span class="v">${at?Math.round(ad*100/at):0}%</span><span class="s">${ad} of ${at} unique topics</span></div>`;
+}
+function cdHtml(info){
+ const d=daysTo(info.date);
+ if(d===null)return `<div class="cd"><span class="d">TBA</span></div><span class="small muted">${esc(info.label)}</span>`;
+ const cls=d<0?"":d<=15?"urgent":d<=60?"soon":"";
+ const big=d<0?"Done":d===0?"Today":d;
+ return `<div class="cd ${cls}"><span class="d">${big}</span><span class="small muted">${d>0?"days to go":d<0?"date passed":""}</span></div>
+ <span class="small muted">${fmtDate(info.date)} <span class="pill ${info.confirmed?"":"est"}">${info.confirmed?"Confirmed":"Estimate"}</span></span>`;
+}
+function renderCards(){
+ const rank=e=>{const i=examInfo(e.id),d=daysTo(i.date);return i.status==="dropped"?3e5:d===null?2e5:d<0?1e5-d:d;};
+ document.getElementById("excards").innerHTML=[...EXAMS].sort((a,b)=>rank(a)-rank(b)).map(e=>{const i=examInfo(e.id);const p=examPct(e);const st=STATUS.find(s=>s[0]===i.status)||STATUS[0];
+ return `<button class="excard" data-exam="${e.id}"><div class="exhead"><span class="exname">${esc(e.name)}</span><span class="kind ${e.t}">${e.t==="tech"?"Technical":"Non-tech"}</span></div>
+ <div style="display:grid;gap:2px">${cdHtml(i)}</div>
+ <div style="display:grid;gap:4px"><div class="row small"><span class="muted">Syllabus</span><span class="num">${p}%</span></div><div class="bar"><i style="width:${p}%"></i></div>${e.t==="tech"?(()=>{const ms=examMods(e),a=sideStat(ms.filter(isTech)),b=sideStat(ms.filter(m=>!isTech(m)));return `<div class="small muted cs" style="display:flex;flex-wrap:wrap;gap:4px 10px"><span><span class="sd tech">Tech</span> ${a.n} subj · ${a.pc}%</span><span><span class="sd non">Non-tech</span> ${b.n} subj · ${b.pc}%</span></div>`;})():""}</div>
+ <div class="row"><span class="pill st-${st[0]}">${st[1]}</span><span class="small muted">${e.stages.length} stage${e.stages.length>1?"s":""}</span></div></button>`;}).join("");
+}
+function renderChart(){
+ const t=today();const days=[];for(let i=27;i>=0;i--){const d=new Date(t);d.setDate(t.getDate()-i);days.push(iso(d));}
+ const hrs=Object.fromEntries(days.map(d=>[d,0]));state.journal.forEach(j=>{if(j.date in hrs)hrs[j.date]+=(+j.hours||0);});
+ const vals=days.map(d=>hrs[d]);const mx=Math.max(4,Math.ceil(Math.max(...vals)));
+ const W=560,H=170,L=26,B=22,T=8,bw=(W-L-4)/28;
+ const y=v=>T+(H-T-B)*(1-v/mx);
+ let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Hours studied per day for the last 28 days">`;
+ [0,mx/2,mx].forEach(v=>{s+=`<line x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${y(v)+3}" text-anchor="end">${+v.toFixed(1)}</text>`;});
+ vals.forEach((v,i)=>{const x=L+2+i*bw;const h=(H-T-B)*(v/mx);if(v>0)s+=`<rect x="${x+1.5}" y="${y(v)}" width="${bw-3}" height="${h}" rx="2" fill="${i===27?"var(--accent)":"var(--non)"}"><title>${days[i]}: ${v}h</title></rect>`;
+  if(i%7===0||i===27){const d=parse(days[i]);s+=`<text x="${i===27?x+bw:x+bw/2}" y="${H-6}" text-anchor="${i===27?"end":"middle"}">${i===27?"Today":d.getDate()+"/"+(d.getMonth()+1)}</text>`;}});
+ s+="</svg>";
+ const sum=vals.reduce((a,b)=>a+b,0);
+ document.getElementById("hrchart").innerHTML=s;
+ document.getElementById("hrsum").textContent=`${sum.toFixed(1)}h · avg ${(sum/28).toFixed(1)}h/day`;
+}
+function spark(arr){const W=90,H=26;if(arr.length<2)return `<svg viewBox="0 0 ${W} ${H}"><circle cx="${W-4}" cy="${H/2}" r="3" fill="var(--accent)"/></svg>`;
+ const mn=Math.min(...arr),mx=Math.max(...arr),r=mx-mn||1;const pts=arr.map((v,i)=>[2+i*(W-6)/(arr.length-1),3+(H-6)*(1-(v-mn)/r)]);
+ return `<svg viewBox="0 0 ${W} ${H}"><polyline fill="none" stroke="var(--accent)" stroke-width="1.6" points="${pts.map(p=>p.join(",")).join(" ")}"/><circle cx="${pts[pts.length-1][0]}" cy="${pts[pts.length-1][1]}" r="2.8" fill="var(--accent)"/></svg>`;}
+function renderMocks(){
+ const by={};sortedJournal().reverse().forEach(j=>{if(j.type==="Mock"&&+j.total>0&&j.score!==""&&j.score!=null){(by[j.exam||"gen"]=by[j.exam||"gen"]||[]).push(Math.round(+j.score*1000/+j.total)/10);}});
+ const keys=Object.keys(by);
+ document.getElementById("mocks").innerHTML=keys.length?keys.map(k=>{const a=by[k];const last=a[a.length-1],best=Math.max(...a);
+  return `<div class="mockrow"><div style="min-width:0"><div style="font-weight:600;font-size:.9rem">${esc(EXBY[k]?.name||"General")}</div><div class="small muted">${a.length} mock${a.length>1?"s":""} · best ${best}%</div></div>${spark(a.slice(-10))}<span class="score">${last}%</span></div>`;}).join("")
+  :`<div class="empty">No mocks logged yet. In the Journal, pick type "Mock" and add your score. The trend for each exam shows up here.</div>`;
+}
+function entryHtml(j,full){
+ const ex=EXBY[j.exam];const md=MODS[j.module];
+ const sc=j.type==="Mock"&&+j.total>0?`<span class="score">${esc(j.score)}/${esc(j.total)} · ${(Math.round(+j.score*1000/+j.total)/10)}%</span>`:"";
+ const conf="●".repeat(+j.conf||0)+"○".repeat(5-(+j.conf||0));
+ const notes=[["Went well",j.well],["Mistakes",j.miss],["Next",j.next]].filter(x=>x[1]);
+ return `<div class="entry"><div class="meta"><span class="date">${fmtDate(j.date)}</span><span class="type ${esc(j.type)}">${j.type==="PYQ"?"PYQ practice":esc(j.type)}</span><span class="num">${(+j.hours||0)}h</span>${sc}<span class="conf" title="Confidence ${+j.conf||0} of 5">${conf}</span>${j.example?'<span class="ex-flag">Example</span>':""}
+ ${full?`<span style="margin-left:auto"></span><button class="lnk" data-del="${esc(j.id)}">Delete</button>`:""}</div>
+ <div class="exm">${esc(ex?ex.name:"General")}${md?" · "+esc(md.n):""}${j.mockName?" · "+esc(j.mockName):""}</div>
+ ${j.topics?`<div style="font-size:.92rem">${esc(j.topics)}</div>`:""}
+ ${notes.length&&full?`<div class="notes3">${notes.map(n=>`<div><span class="label">${n[0]}</span>${esc(n[1])}</div>`).join("")}</div>`:""}</div>`;
+}
+function renderRecent(){const J=sortedJournal().slice(0,3);document.getElementById("recent").innerHTML=J.length?J.map(j=>entryHtml(j,false)).join(""):`<div class="empty">Your study log is empty. Open the Journal and log today's session: hours, subject, topics, and what you got wrong.</div>`;}
+let pendingDel=null;
+function renderLedger(){
+ const fe=document.getElementById("fExam").value,ft=document.getElementById("fType").value;
+ const J=sortedJournal().filter(j=>(!fe||j.exam===fe)&&(!ft||j.type===ft));
+ document.getElementById("ledger").innerHTML=J.length?J.map(j=>{let h=entryHtml(j,true);if(pendingDel===j.id)h=h.replace(`data-del="${esc(j.id)}">Delete`,`data-del="${esc(j.id)}" data-confirm="1" style="color:var(--bad);font-weight:600">Tap again to delete`);return h;}).join(""):`<div class="empty">${state.journal.length?"No entries match these filters.":"No entries yet. Use the form above to log your first session."}</div>`;
+}
+
+/* ---------------- EXAM OVERVIEW: difficulty + General cutoffs ---------------- */
+// My rating of how hard each subject is for a fresh B.Tech grad (concept load + numericals), not exam weight.
+const DIFF={sm:"Tough",sa:"Tough",rcc:"Tough",soil:"Tough",fm:"Tough",steel:"Medium",ocf:"Medium",hm:"Easy",hyd:"Medium",irr:"Medium",est:"Medium",surv:"Medium",trans:"Medium",bm:"Easy",env:"Easy",const:"Easy",
+ quant:"Medium",advm:"Tough",reas:"Medium",eng:"Medium",gk:"Medium",sci:"Medium",ca:"Easy",comp:"Easy",bdi:"Tough",breas:"Tough",bank:"Easy",desc:"Medium",mpgk:"Easy",esi:"Tough",fmgt:"Tough"};
+const DIFC={Tough:"bad",Medium:"warn",Easy:"ok"};
+// General (UR) cutoffs from past cycles. Not official for the next exam.
+const CUT={
+ sscje:{rows:[["Paper 1 (of 200)","127.23 (2025) · 122.92 (2024) · 108.17 (2023)"],["Final, old P1+P2 (of 500)","CPWD 388.18 · BRO 361.25 (2025)"]],tgt:"Paper 1: 140+/200. Paper 2: 200+/300 (merit is Paper 2 only from 2026, no past cutoff yet).",src:["MADE EASY","https://blog.madeeasy.in/ssc-je-cut-off-analysis"]},
+ rrbje:{rows:[["CBT 1 (of 100, 2024, RRB Bhopal)","~62 to 84 by post group · all zones 46 to 92"],["Minimum to qualify","UR 40% · OBC/SC 30% · ST 25%"]],tgt:"CBT 1: 85+/100. CBT 2 UR cutoff is not published by most sources.",src:["MADE EASY","https://blog.madeeasy.in/rrb-je-previous-year-cut-off-analysis"]},
+ mppscae:{rows:[["Written (of 450)","Not published for recent cycles"]],tgt:"Aim 65%+ of the written paper (~290/450). My estimate.",src:null},
+ mpesb:{rows:[["Sub Engineer Civil 2022 (of 200)","Male 158.34 · Female 140.11"]],tgt:"170+/200. Cutoffs here are high, Part A GK/Hindi matters.",src:["PW","https://www.pw.live/ae-je/exams/mp-sub-engineer-cut-off"]},
+ mpdept:{rows:[["Cutoff","Changes per department drive"]],tgt:"Use your SSC JE and MPESB scores as the benchmark.",src:null},
+ fcije:{rows:[["Cutoff","No recent cycle to compare"]],tgt:"Aim at SSC JE level. My estimate.",src:null},
+ cgl:{rows:[["Tier 1 (of 200, 2024)","153.19 (other posts)"]],tgt:"Tier 1: 165+/200.",src:["Careers360","https://news.careers360.com/ssc-cgl-tier-1-result-2024-out-186509-declared-qualified-category-wise-cut-offs-for-all-posts/amp"]},
+ ntpc:{rows:[["CBT 1 (of 100, last cycle)","RRB Bhopal 72.9 · zones 68.6 to 79.5"]],tgt:"CBT 1: 82+/100.",src:["PW","https://store.pw.live/blogs/rrb-exams/rrb-ntpc-cut-off-2025"]},
+ ibps:{rows:[["PO Prelims (of 100)","49.21 (2025) · 48.50 (2024)"],["PO Mains (of 225)","66.50 (2024)"],["PO Final (of 100)","46.11 (2025)"]],tgt:"Prelims: 60+/100. Plus clear every section cutoff.",src:["Mahendras","https://www.mahendras.org/blogs/ibps-po-previous-year-cut-off"]},
+ sbi:{rows:[["PO Prelims (of 100, 2025)","66.75"],["PO Mains (of 250, 2025)","75"],["PO Final (of 100, 2025)","46.79"]],tgt:"Prelims: 75+/100.",src:["Mahendras","https://www.mahendras.org/blogs/sbi-po-cut-off"]},
+ rbi:{rows:[["Grade B Phase 1 (of 200)","77.50 (2025) · 67.25 (2024)"],["Phase 2 (of 300, 2024)","173.50"],["Final (of 375, 2024)","226.75"]],tgt:"Phase 1: 90+/200. Section cutoffs also apply.",src:["Mahendras","https://www.mahendras.org/blogs/rbi-grade-b-previous-year-cut-off-prelims-mains-and-final-cut-off-explained"]}
+};
+const isTech=m=>MODS[m].g==="civil";
+function sideStat(mods){let d=0,t=0;mods.forEach(m=>{const p=modPct(m);d+=p.done;t+=p.total;});return{n:mods.length,d,t,pc:t?Math.round(d*100/t):0};}
+function splitHtml(mods,pre){
+ const T=mods.filter(isTech),N=mods.filter(m=>!isTech(m));
+ return [["tech","Technical (civil)",T],["non","Non-tech",N]].filter(x=>x[2].length).map(([k,lab,ms])=>{const st=sideStat(ms);const df={Tough:0,Medium:0,Easy:0};ms.forEach(m=>df[DIFF[m]]++);
+  return `<div class="ovs ${k}" id="${pre}-${k}"><div class="row"><b>${lab}</b><span class="small num">${st.pc}%</span></div><div class="small"><span class="num" data-n>${st.n}</span> subjects · <span class="num" data-t>${st.t}</span> topics · ${st.d} done</div><div class="bar"><i style="width:${st.pc}%"></i></div><div class="small muted">${["Tough","Medium","Easy"].map(x=>df[x]+" "+x.toLowerCase()).join(" · ")}</div></div>`;}).join("");
+}
+function weakSubs(mods){
+ const out=[];mods.forEach(m=>{const s=state.progress[m]||{};const learn=MODS[m].ids.filter(i=>s[i]===1).length;
+  const js=state.journal.filter(j=>!j.example&&j.module===m);const miss=js.filter(j=>j.miss).length;const low=js.filter(j=>(+j.conf||3)<=2).length;
+  const sc=learn+miss*2+low*2;if(sc>0){const why=[];if(learn)why.push(learn+" topic"+(learn>1?"s":"")+" stuck on Learning");if(miss)why.push(miss+" journal mistake"+(miss>1?"s":""));if(low)why.push(low+" low-confidence session"+(low>1?"s":""));out.push({m,sc,why:why.join(" · ")});}});
+ return out.sort((a,b)=>b.sc-a.sc).slice(0,4);
+}
+function overviewHtml(e){
+ const mods=examMods(e);const topics=mods.reduce((a,m)=>a+MODS[m].ids.length,0);let done=0;mods.forEach(m=>done+=modPct(m).done);
+ const i=examInfo(e.id);const dl=daysTo(i.date);
+ const by={Tough:[],Medium:[],Easy:[]};mods.forEach(m=>by[DIFF[m]].push(m));
+ const W=weakSubs(mods);const C=CUT[e.id];
+ const gaps=mods.filter(m=>GUIDE[m]&&GUIDE[m].wt>=7&&modPct(m).done===0).sort((a,b)=>GUIDE[b].wt-GUIDE[a].wt).slice(0,3);
+ return `<div class="ovw" id="ovw">
+ <div class="ovk"><div><span class="label">Subjects</span><b class="num" id="ov-subj">${mods.length}</b></div><div><span class="label">Topics</span><b class="num" id="ov-top">${topics}</b></div><div><span class="label">Done</span><b class="num">${done}/${topics}</b></div><div><span class="label">Days left</span><b class="num">${dl===null?"TBA":dl<0?"Over":dl}</b></div></div>
+ ${e.t==="tech"?`<div class="ovsp">${splitHtml(mods,"ovs")}</div>`:""}
+ <div class="ovg">
+  <div class="ovc"><div class="label">Subject difficulty</div>${["Tough","Medium","Easy"].map(k=>`<div class="ovd" data-diff="${k}"><span class="gc imp-${DIFC[k]}">${k} · ${by[k].length}</span>${e.t==="tech"?[["Tech",by[k].filter(isTech)],["Non-tech",by[k].filter(m=>!isTech(m))]].map(([l,ms])=>`<span class="small"><span class="sd ${l==="Tech"?"tech":"non"}">${l}</span> ${ms.map(m=>esc(MODS[m].n)).join(", ")||"None"}</span>`).join(""):`<span class="small">${by[k].map(m=>esc(MODS[m].n)).join(", ")||"None"}</span>`}</div>`).join("")}<div class="small muted">My rating of concept load and numericals. Tough ones need the most practice time.</div></div>
+  <div class="ovc"><div class="label">Your weak subjects</div>${W.length?`<ul class="wl" id="ov-weak">${W.map(w=>`<li>${e.t==="tech"?`<span class="sd ${isTech(w.m)?"tech":"non"}">${isTech(w.m)?"Tech":"Non-tech"}</span> `:""}<b>${esc(MODS[w.m].n)}</b> <span class="muted">· ${esc(w.why)}</span></li>`).join("")}</ul>`:`<div class="small muted" id="ov-weak">None yet. This fills from topics you mark "Learning", and mistakes or low confidence (1 to 2) in your journal.</div>`}
+  ${gaps.length?`<div class="label" style="margin-top:6px">High-weight, not started</div><div class="small">${gaps.map(m=>`${esc(MODS[m].n)} (~${GUIDE[m].wt} Qs)`).join(" · ")}</div>`:""}</div>
+  <div class="ovc"><div class="label">General (UR) cutoff · past cycles</div>${C.rows.map(r=>`<div class="ovr"><span class="small muted">${esc(r[0])}</span><b class="small num">${esc(r[1])}</b></div>`).join("")}<div class="ovt"><b>Your safe target:</b> ${esc(C.tgt)}</div><div class="small muted">${C.src?`Source: <a href="${C.src[1]}" target="_blank" rel="noopener">${esc(C.src[0])}</a>. `:""}Past numbers only. Cutoffs change every year.</div></div>
+ </div></div>`;
+}
+function renderChips(){document.getElementById("exchips").innerHTML=EXAMS.map(e=>`<button class="chip ${e.t}" data-sel="${e.id}" aria-pressed="${e.id===curExam}">${esc(e.name)}</button>`).join("");}
+function renderSyllabus(){
+ renderChips();const e=EXBY[curExam];const i=examInfo(e.id);const p=examPct(e);
+ document.getElementById("exinfo").innerHTML=`<div class="row"><div><h2>${esc(e.name)}</h2><span class="small muted">${esc(e.body)} · ${i.date?fmtDate(i.date)+(i.confirmed?"":" (estimate)"):esc(i.label)}</span></div><span class="num" style="font-size:1.3rem;font-weight:600">${p}% done</span></div>
+ ${overviewHtml(e)}
+ <div class="stages">${e.stages.map(s=>`<div class="stage"><b>${esc(s.n)}</b><span class="small muted">${esc(s.d)}</span></div>`).join("")}</div>
+ ${e.note?`<div class="note">${esc(e.note)}</div>`:""}`;
+ document.getElementById("srcf").innerHTML=[["","All topics"],["=","Match"],["-","No match"],["+","My material"]].map(f=>`<button class="chip" data-src="${f[0]}" aria-pressed="${f[0]===curSrc}">${f[1]}</button>`).join("");
+ document.getElementById("mods").innerHTML=examMods(e).sort((a,b)=>(isTech(b)-isTech(a))||orderOf[a]-orderOf[b]).filter(m=>!curSrc||MODS[m].src.includes(curSrc)).map(m=>{const M=MODS[m];const pc=modPct(m);const pr=state.progress[m]||{};const open=openMods.has(m);
+    return `<div class="mod ${open?"open":""}"><button class="modhead" data-mod="${m}" aria-expanded="${open}"><div style="min-width:0"><div class="t">${esc(M.n)}</div><div class="tags">${GUIDE[m]?chips(m):""}${M.g==="civil"?(M.folder?`<span class="fold">📁 ${esc(M.folder)}</span>`:`<span class="tg">No folder in your material</span>`):""}${M.g==="civil"?`<span class="gx">${M.src.filter(x=>x==="=").length} match · ${M.src.filter(x=>x==="-").length} no match · ${M.src.filter(x=>x==="+").length} mine</span>`:""}${e.stages.length>1?`<span class="gx">${modStages(e,m).map(s=>esc(s.split(" · ")[0])).join(" + ")}</span>`:""}</div></div>
+  <div style="display:grid;gap:3px"><span class="small num muted">${pc.done}/${pc.total}</span><div class="bar"><i style="width:${Math.round(pc.done*100/pc.total)}%"></i></div></div><span class="caret">▸</span></button>
+  ${open?`<div class="topics">${M.t.map((t,k)=>{if(curSrc&&M.src[k]!==curSrc)return "";const v=pr[M.ids[k]]||0;const sg=SRC[M.src[k]];return `<div class="topic"><span class="nm">${esc(t)}${sg?`<span class="mt ${sg[1]}">${sg[0]}</span>`:""}</span><button class="sbtn ${v?"s"+v:""}" data-m="${m}" data-k="${k}">${TSTATE[v]}</button></div>`;}).join("")}</div>
+  <div class="modtools"><button class="lnk" data-all="${m}" data-v="2">Mark all done</button><button class="lnk" data-all="${m}" data-v="0">Reset</button></div>`:""}</div>`;}).join("");
+}
+function renderExTable(){
+ document.getElementById("extable").innerHTML=EXAMS.map(e=>{const i=examInfo(e.id);
+ return `<div class="exrow"><div class="nm"><div style="font-weight:600">${esc(e.name)}</div><div class="small muted">${esc(i.label)}</div></div>
+ <div class="f"><label for="d-${e.id}">Exam date</label><input type="date" id="d-${e.id}" data-ed="${e.id}" data-f="date" value="${esc(i.date)}"></div>
+ <label class="chk"><input type="checkbox" id="c-${e.id}" data-ed="${e.id}" data-f="confirmed" ${i.confirmed?"checked":""}> Confirmed</label>
+ <div class="f"><label for="s-${e.id}">Status</label><select id="s-${e.id}" data-ed="${e.id}" data-f="status">${STATUS.map(s=>`<option value="${s[0]}" ${s[0]===i.status?"selected":""}>${s[1]}</option>`).join("")}</select></div>
+ <div class="f nt"><label for="n-${e.id}">Notes (roll no., centre, links)</label><textarea id="n-${e.id}" data-ed="${e.id}" data-f="notes" placeholder="Application no., exam centre…">${esc(i.notes)}</textarea></div></div>`;}).join("");
+}
+function fillSelects(){
+ const opts=`<option value="">General / all</option>`+EXAMS.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join("");
+ document.getElementById("jExam").innerHTML=opts;document.getElementById("fExam").innerHTML=`<option value="">All</option>`+EXAMS.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join("");
+ fillModules();
+}
+function fillModules(){
+ const ex=document.getElementById("jExam").value;const list=ex?examMods(EXBY[ex]):Object.keys(MODS);const sel=document.getElementById("jModule");const cur=sel.value;
+ sel.innerHTML=`<option value="">Mixed / not specific</option>`+list.map(m=>`<option value="${m}">${esc(MODS[m].n)}</option>`).join("");
+ if(list.includes(cur))sel.value=cur;
+}
+/* ---------------- GUIDE + REVISION ---------------- */
+let curTrack="tech";const openNotes=new Set();
+const REV=[1,7,30];
+const addDays=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return iso(d);};
+function revDue(){
+ const out=[];const t=iso(today());
+ for(const m in MODS){const s=state.progress[m]||{},d=state.dates[m]||{},r=state.revs[m]||{};
+  MODS[m].ids.forEach((id,k)=>{if((s[id]||0)>=2&&d[id]&&(r[id]||0)<3){const due=addDays(d[id],REV[r[id]||0]);if(due<=t)out.push({m,id,k,due,n:(r[id]||0)+1});}});}
+ return out.sort((a,b)=>a.due.localeCompare(b.due));
+}
+function markRevised(m,id){
+ const s=state.progress[m]||(state.progress[m]={}),d=state.dates[m]||(state.dates[m]={}),r=state.revs[m]||(state.revs[m]={});
+ s[id]=3;d[id]=iso(today());r[id]=Math.min(3,(r[id]||0)+1);saveMod(m);
+}
+function revHtml(limit){
+ const L=revDue();
+ if(!L.length)return `<div class="empty">Nothing to revise today. When you mark a topic Done, it comes back here after 1, 7 and 30 days.</div>`;
+ return L.slice(0,limit).map(x=>`<div class="revrow"><div style="min-width:0"><div class="nm">${esc(MODS[x.m].t[x.k])}</div><div class="small muted">${esc(MODS[x.m].n)} · revision ${x.n} of 3 · due ${fmtDate(x.due)}</div></div><button class="btn ghost sm" data-rev="${x.m}|${x.id}">Revised</button></div>`).join("")+(L.length>limit?`<div class="small muted">+ ${L.length-limit} more due</div>`:"");
+}
+function weakHtml(){
+ const learn=[];for(const m in MODS){const s=state.progress[m]||{};MODS[m].ids.forEach((id,k)=>{if(s[id]===1&&trackOf(m)===curTrack)learn.push(`${MODS[m].t[k]} <span class="muted">· ${MODS[m].n}</span>`);});}
+ const miss=sortedJournal().filter(j=>j.miss&&!j.example&&(!j.module||trackOf(j.module)===curTrack)).slice(0,6);
+ let h=`<div class="label">Stuck on "Learning" (${learn.length})</div>`;
+ h+=learn.length?`<ul class="wl">${learn.slice(0,8).map(x=>`<li>${x}</li>`).join("")}</ul>${learn.length>8?`<div class="small muted">+ ${learn.length-8} more</div>`:""}`:`<div class="small muted">None. Topics you mark "Learning" show here until you finish them.</div>`;
+ h+=`<div class="label" style="margin-top:6px">Recent mistakes from your journal</div>`;
+ h+=miss.length?`<ul class="wl">${miss.map(j=>`<li>${esc(j.miss)} <span class="muted">· ${fmtDate(j.date)}${MODS[j.module]?" · "+esc(MODS[j.module].n):""}</span></li>`).join("")}</ul>`:`<div class="small muted">None yet. Fill "Mistakes / weak spots" when you log a session.</div>`;
+ return h;
+}
+function trackMods(t){return TRACKS[t].phases.flatMap(p=>p.m);}
+function nextExam(t){return EXAMS.filter(e=>e.t===t).map(e=>({e,i:examInfo(e.id)})).filter(x=>x.i.date&&x.i.status!=="dropped"&&daysTo(x.i.date)>=0).sort((a,b)=>a.i.date.localeCompare(b.i.date))[0];}
+function planDates(t){
+ const st=state.plan[t+"Start"]||iso(today());let acc=0;const o={};
+ trackMods(t).forEach(m=>{const g=GUIDE[m];const a=acc;acc+=g.w;o[m]={from:addDays(st,Math.round(a*7)),to:addDays(st,Math.round(acc*7)-1)};});
+ return{st,weeks:acc,end:addDays(st,Math.round(acc*7)-1),per:o};
+}
+function chips(m){const g=GUIDE[m];return `<span class="gc">#${orderOf[m]}</span>${wtChip(m)}<span class="gc imp-${IMPC[g.imp]}">${esc(g.imp)}</span><span class="gc">${g.w<1?Math.round(g.w*7)+" days":g.w+(g.w===1?" week":" weeks")}</span><span class="gx">${esc(g.d)} · ${esc(g.ty)}</span>`;}
+function renderGuide(){
+ const ae=document.activeElement;if(ae&&ae.closest&&ae.closest("#v-guide")&&ae.tagName==="INPUT")return;
+ const t=curTrack;
+ document.getElementById("gtrack").innerHTML=["tech","non"].map(k=>`<button class="chip ${k}" data-track="${k}" aria-pressed="${k===t}">${TRACKS[k].n}</button>`).join("");
+ const P=planDates(t);const nx=nextExam(t);
+ let verdict="";
+ if(nx){const gap=Math.round((parse(P.end)-parse(nx.i.date))/864e5);
+  verdict=gap<=0?`<span class="pill st-selected">On track</span> Plan ends ${fmtDate(P.end)}, before ${esc(nx.e.name)} on ${fmtDate(nx.i.date)}.`
+  :`<span class="pill warnp">Short by ${Math.ceil(gap/7)} week${Math.ceil(gap/7)>1?"s":""}</span> Plan ends ${fmtDate(P.end)} but ${esc(nx.e.name)} is on ${fmtDate(nx.i.date)}${nx.i.confirmed?"":" (estimate)"}. Before that date, do only <b>Critical</b> and <b>PYQs focus</b> subjects, and use PYQs.`;}
+ else verdict=`No upcoming ${t==="tech"?"technical":"non-tech"} exam date set. Add dates in the Exam dates tab.`;
+ document.getElementById("gplan").innerHTML=`<div class="f" style="max-width:190px"><label for="gStart">Plan start date</label><input type="date" id="gStart" value="${esc(P.st)}"></div>
+  <div class="gsum"><div><span class="label">Full plan</span><div class="num" style="font-size:1.2rem;font-weight:600">${+P.weeks.toFixed(1)} weeks</div><div class="small muted">${fmtDate(P.st)} → ${fmtDate(P.end)}</div></div><div class="small" style="min-width:0">${verdict}</div></div>`;
+ document.getElementById("gnow").innerHTML=nowHtml(t);
+ document.getElementById("gseq").innerHTML=seqHtml(t);
+ document.getElementById("grev").innerHTML=revHtml(8);
+ document.getElementById("gweak").innerHTML=weakHtml();
+ document.getElementById("gphases").innerHTML=TRACKS[t].phases.map(ph=>`<div class="phase"><div><h2>${esc(ph.n)}</h2><div class="small muted">${esc(ph.note)}</div></div>
+  <div class="gcards">${ph.m.map(m=>{const g=GUIDE[m],M=MODS[m],p=modPct(m),pct=Math.round(p.done*100/p.total),pd=P.per[m],y=state.plan.pyq[m]||0;
+   const st=pct>=100?"Done":(p.done||p.learn)?"In progress":"Not started";
+   const needs=g.needs.map(([n,why])=>{const q=modPct(n),qp=Math.round(q.done*100/q.total);return `<span class="need ${qp<50?"low":""}" title="${esc(why)}">Needs ${esc(MODS[n].n)} · ${qp}%</span>`;}).join("");
+   return `<div class="gcard"><div class="row"><h3>${esc(M.n)}</h3><span class="pill">${st}</span></div>
+   <div class="gchips">${chips(m)}</div>
+   ${needs?`<div class="gchips">${needs}</div><div class="small muted">Uses: ${g.needs.map(x=>esc(x[1])).join("; ")}</div>`:""}
+   <div style="display:grid;gap:4px"><div class="row small"><span class="muted">Topics ${p.done}/${p.total}</span><span class="num">${pct}%</span></div><div class="bar"><i style="width:${pct}%"></i></div></div>
+   <div class="small muted">Plan: ${fmtDate(pd.from)} → ${fmtDate(pd.to)} · ${esc(g.grp)}</div>
+   <details class="gdet" data-det="${m}" ${openNotes.has(m)?"open":""}><summary>Study notes: why here, focus, traps, PYQ tip</summary><dl class="gnotes"><dt>Weightage</dt><dd>${esc(g.wtx)}</dd><dt>Why here</dt><dd>${esc(g.why)}</dd><dt>Focus</dt><dd>${esc(g.focus)}</dd><dt>Common traps</dt><dd>${esc(g.trap)}</dd><dt>PYQ tip</dt><dd>${esc(g.pyq)}</dd></dl></details>
+   <div class="pyq"><label for="pyq-${m}" class="small muted">PYQs solved</label><input type="number" min="0" id="pyq-${m}" data-pyq="${m}" value="${y}"><span class="small muted">/ ${g.tgt}</span><div class="bar" style="flex:1;min-width:60px"><i style="width:${Math.min(100,Math.round(y*100/g.tgt))}%;background:var(--non)"></i></div></div>
+   <button class="lnk" data-open="${m}" style="justify-self:start">Open topics →</button></div>`;}).join("")}</div></div>`).join("");
+}
+function setPlan(patch){
+ state.plan={...state.plan,...patch};
+ if(mode==="db")db.doc("settings/plan").set(JSON.parse(JSON.stringify(state.plan))).catch(err);else saveLocal();
+ renderAll();
+}
+
+/* ---------------- NOW STUDYING + SEQUENCE ---------------- */
+const pctOf=m=>{const p=modPct(m);return Math.round(p.done*100/p.total);};
+function curSubject(t){const pin=(state.plan.cur||{})[t];if(pin&&MODS[pin]&&pctOf(pin)<100)return pin;return trackMods(t).find(m=>pctOf(m)<100)||null;}
+function curTopic(m){const s=state.progress[m]||{};const ids=MODS[m].ids;let k=ids.findIndex(id=>s[id]===1);if(k<0)k=ids.findIndex(id=>!s[id]);return k<0?null:k;}
+const wtChip=m=>GUIDE[m].wt!=null?`<span class="gc wt">~${GUIDE[m].wt} Qs / 100</span>`:"";
+function nowHtml(t,w){w=w||"g";
+ const m=curSubject(t);const pin=(state.plan.cur||{})[t]||"";
+ const sel=`<select id="cur-${w}-${t}" data-cur="${t}" aria-label="Choose current subject"><option value="">Auto (next in order)</option>${trackMods(t).map(x=>`<option value="${x}" ${x===pin?"selected":""}>#${orderOf[x]} ${esc(MODS[x].n)}</option>`).join("")}</select>`;
+ if(!m)return `<div class="row"><span class="label">Now studying · ${TRACKS[t].n}</span></div><div class="empty">Every subject in this track is done. Keep revising from "Revise today".</div>`;
+ const M=MODS[m],k=curTopic(m),s=(state.progress[m]||{});const v=k==null?0:(s[M.ids[k]]||0);const p=modPct(m);const nxt=trackMods(t)[trackMods(t).indexOf(m)+1];
+ return `<div class="row"><span class="label">Now studying · ${TRACKS[t].n}</span><span class="small muted">${pin?"Chosen by you":"Auto: next in order"}</span></div>
+ <div class="nowsub"><span class="nowno">#${orderOf[m]}</span><div style="min-width:0"><h3>${esc(M.n)}</h3><div class="gchips" style="margin-top:4px">${wtChip(m)}<span class="gc imp-${IMPC[GUIDE[m].imp]}">${esc(GUIDE[m].imp)}</span><span class="gc">${esc(GUIDE[m].d)}</span></div></div></div>
+ <div style="display:grid;gap:4px"><div class="row small"><span class="muted">Topics ${p.done}/${p.total}</span><span class="num">${pctOf(m)}%</span></div><div class="bar"><i style="width:${pctOf(m)}%"></i></div></div>
+ ${k==null?"":`<div class="nowtopic"><span class="label">Current topic · ${k+1} of ${M.t.length}</span><div class="nm">${esc(M.t[k])}</div><div class="row" style="justify-content:flex-start;gap:8px">${v===0?`<button class="btn ghost sm" data-now="${m}|${k}|1">Start learning</button>`:`<span class="sbtn s1" style="cursor:default">Learning</span>`}<button class="btn sm" data-now="${m}|${k}|2">Mark done → next topic</button><button class="lnk" data-open="${m}">All topics</button></div></div>`}
+ <div class="row small"><span class="muted">${nxt?"Up next: #"+orderOf[nxt]+" "+esc(MODS[nxt].n):"Last subject in this track"}</span>${sel}</div>`;
+}
+function seqHtml(t){
+ const P=planDates(t);const cur=curSubject(t);
+ return `<div class="seqwrap"><table class="seq"><thead><tr><th>#</th><th>Subject</th><th>Weightage</th><th>Importance</th><th>Time</th><th>Plan</th><th>Progress</th><th></th></tr></thead><tbody>${trackMods(t).map(m=>{const g=GUIDE[m],pc=pctOf(m),pd=P.per[m];
+  return `<tr class="${m===cur?"cur":""}"><td class="num">${orderOf[m]}</td><td><b>${esc(MODS[m].n)}</b>${m===cur?' <span class="pill st-applied">Now</span>':""}</td><td class="small">${esc(g.wtx)}</td><td><span class="gc imp-${IMPC[g.imp]}">${esc(g.imp)}</span></td><td class="num small">${g.w<1?Math.round(g.w*7)+"d":g.w+"w"}</td><td class="small num">${fmtDate(pd.from).replace(/ \d{4}$/,"")} → ${fmtDate(pd.to).replace(/ \d{4}$/,"")}</td><td><div class="sqp"><div class="bar"><i style="width:${pc}%"></i></div><span class="small num">${pc}%</span></div></td><td>${m===cur?"":`<button class="lnk" data-pin="${t}|${m}">Study now</button>`}</td></tr>`;}).join("")}</tbody></table></div>`;
+}
+function setCur(t,m){setPlan({cur:{...(state.plan.cur||{}),[t]:m}});}
+
+let exTableFocus=false;
+function renderAll(){const R={guide:renderGuide,syllabus:renderSyllabus,journal:renderLedger,exams:()=>{if(!exTableFocus)renderExTable();}};(R[curTab]||renderOverview)();}
+function renderOverview(){["tech","non"].forEach(t=>{const el=document.getElementById("onow-"+t);if(!(document.activeElement&&el.contains(document.activeElement)&&document.activeElement.tagName==="SELECT"))el.innerHTML=nowHtml(t,"o");});document.getElementById("orev").innerHTML=revHtml(4);renderStats();document.getElementById("osplit").innerHTML=splitHtml(Object.keys(MODS).filter(m=>EXAMS.some(e=>examMods(e).includes(m))),"os");renderCards();renderChart();renderMocks();renderRecent();}
+
+/* ---------------- EVENTS ---------------- */
+document.addEventListener("click",ev=>{
+ const b=ev.target.closest("button");if(!b)return;
+ if(b.dataset.tab)showTab(b.dataset.tab);
+ else if(b.dataset.go)showTab(b.dataset.go);
+ else if(b.dataset.exam){curExam=b.dataset.exam;renderSyllabus();showTab("syllabus");}
+ else if(b.dataset.src!==undefined){curSrc=b.dataset.src;if(curSrc)examMods(EXBY[curExam]).forEach(m=>{if(MODS[m].src.includes(curSrc))openMods.add(m);});renderSyllabus();}
+ else if(b.dataset.sel){curExam=b.dataset.sel;renderSyllabus();}
+ else if(b.dataset.mod){const m=b.dataset.mod;openMods.has(m)?openMods.delete(m):openMods.add(m);renderSyllabus();}
+ else if(b.dataset.m){const m=b.dataset.m,id=MODS[m].ids[+b.dataset.k];const v=((state.progress[m]||{})[id]||0);setTopic(m,id,(v+1)%4);}
+ else if(b.dataset.all){const m=b.dataset.all,v=+b.dataset.v;MODS[m].ids.forEach(i=>{const c=(state.progress[m]||{})[i]||0;applyTopic(m,i,v?Math.max(v,c):0);});saveMod(m);}
+ else if(b.dataset.now){const [m,k,v]=b.dataset.now.split("|");setTopic(m,MODS[m].ids[+k],+v);}
+ else if(b.dataset.pin){const [t,m]=b.dataset.pin.split("|");setCur(t,m);}
+ else if(b.dataset.rev){const [m,id]=b.dataset.rev.split("|");markRevised(m,id);}
+ else if(b.dataset.track){curTrack=b.dataset.track;renderGuide();}
+ else if(b.dataset.open){const m=b.dataset.open;const ex=EXAMS.find(e=>e.id===curExam&&examMods(e).includes(m))||EXAMS.find(e=>examMods(e).includes(m));curExam=ex.id;curSrc="";openMods.add(m);renderSyllabus();showTab("syllabus");}
+ else if(b.dataset.del){if(b.dataset.confirm){pendingDel=null;delEntry(b.dataset.del);}else{pendingDel=b.dataset.del;renderLedger();setTimeout(()=>{if(pendingDel===b.dataset.del){pendingDel=null;renderLedger();}},4000);}}
+});
+document.getElementById("extable").addEventListener("focusin",()=>exTableFocus=true);
+document.getElementById("extable").addEventListener("focusout",()=>{exTableFocus=false;});
+document.getElementById("extable").addEventListener("change",ev=>{const el=ev.target;if(!el.dataset.ed)return;const v=el.type==="checkbox"?el.checked:el.value;setExam(el.dataset.ed,{[el.dataset.f]:v});});
+document.getElementById("v-guide").addEventListener("change",ev=>{const el=ev.target;
+ if(el.id==="gStart"){el.blur();setPlan({[curTrack+"Start"]:el.value});}
+ else if(el.dataset.pyq){const pq={...state.plan.pyq,[el.dataset.pyq]:Math.max(0,+el.value||0)};el.blur();setPlan({pyq:pq});}});
+document.addEventListener("change",ev=>{const el=ev.target;if(el.dataset&&el.dataset.cur){el.blur();setCur(el.dataset.cur,el.value);}});
+document.getElementById("jExam").addEventListener("change",fillModules);
+document.getElementById("fExam").addEventListener("change",renderLedger);
+document.getElementById("fType").addEventListener("change",renderLedger);
+const jType=document.getElementById("jType");
+const syncMock=()=>document.querySelectorAll(".mockf").forEach(f=>f.hidden=jType.value!=="Mock");
+jType.addEventListener("change",syncMock);
+document.getElementById("jform").addEventListener("submit",async ev=>{
+ ev.preventDefault();const g=id=>document.getElementById(id).value.trim();
+ const e={date:g("jDate"),hours:+g("jHours")||0,type:g("jType"),exam:g("jExam"),module:g("jModule"),topics:g("jTopics"),conf:+g("jConf")||3,well:g("jWell"),miss:g("jMiss"),next:g("jNext"),createdAt:Date.now()};
+ if(e.type==="Mock"){e.score=g("jScore");e.total=g("jTotal");e.mockName=g("jMockName");}
+ const toast=document.getElementById("jtoast");
+ try{await addEntry(e);["jTopics","jScore","jTotal","jMockName","jWell","jMiss","jNext","jHours"].forEach(id=>document.getElementById(id).value="");toast.style.color="var(--ok)";toast.textContent="Saved";setTimeout(()=>toast.textContent="",2500);}
+ catch(x){toast.style.color="var(--bad)";toast.textContent="Not saved ("+(x&&x.code||"error")+"). Check your connection and try again.";}
+});
+
+/* ---------------- BOOT ---------------- */
+document.getElementById("jDate").value=iso(today());
+fillSelects();syncMock();
+document.addEventListener("toggle",ev=>{const d=ev.target;if(d.dataset&&d.dataset.det){d.open?openNotes.add(d.dataset.det):openNotes.delete(d.dataset.det);}},true);
+const h=(location.hash||"").slice(1);if(["overview","guide","syllabus","journal","exams"].includes(h))showTab(h);
+renderAll();
+/* ---------------- STORAGE: Firebase sync (own account) or this device ---------------- */
+const m=document.getElementById("mode"),authBtn=document.getElementById("authBtn");
+let unsubs=[];
+function scoped(fs,uid){const base="users/"+uid+"/";return{doc:p=>fs.doc(base+p),collection:c=>fs.collection(base+c)};}
+function hasLocalData(){return state.journal.some(j=>!j.example)||Object.values(state.progress).some(o=>Object.keys(o||{}).length)||Object.keys(state.exams).length||!!state.plan.techStart;}
+async function pushLocalToCloud(){
+ const b=fbDb.batch();const sc=scoped(fbDb,fbUser.uid);
+ Object.keys(MODS).forEach(k=>{if(state.progress[k]&&Object.keys(state.progress[k]).length)b.set(sc.doc("progress/"+k),{s:state.progress[k],d:state.dates[k]||{},r:state.revs[k]||{}});});
+ for(const k in state.exams)b.set(sc.doc("exams/"+k),state.exams[k]);
+ b.set(sc.doc("settings/plan"),JSON.parse(JSON.stringify(state.plan)));
+ state.journal.filter(j=>!j.example).forEach(j=>{const {id,...x}=j;b.set(sc.doc("journal/"+(id||("l"+Date.now()))),x);});
+ await b.commit();
+}
+function listen(){
+ unsubs.forEach(u=>u());unsubs=[];
+ unsubs.push(db.collection("exams").onSnapshot(s=>{const o={};s.docs.forEach(d=>o[d.id]=d.data());state.exams=o;renderAll();},err));
+ unsubs.push(db.collection("progress").onSnapshot(s=>{s.docs.forEach(d=>{if(!ptimers[d.id]){const x=d.data()||{};state.progress[d.id]=x.s||{};state.dates[d.id]=x.d||{};state.revs[d.id]=x.r||{};}});renderAll();},err));
+ unsubs.push(db.collection("settings").onSnapshot(s=>{s.docs.forEach(d=>{if(d.id==="plan"){const x=d.data()||{};state.plan={techStart:"",nonStart:"",pyq:{},cur:{},...x,pyq:x.pyq||{},cur:x.cur||{}};}});renderAll();},err));
+ unsubs.push(db.collection("journal").onSnapshot(s=>{state.journal=s.docs.map(d=>({id:d.id,...d.data()}));renderAll();},err));
+}
+function goLocal(msg){db=null;mode="local";loadLocal();m.textContent=msg;m.className="mode warn";renderAll();}
+let fbDb=null,fbUser=null;
+(async()=>{
+ const cfg=window.FIREBASE_CONFIG;
+ if(!cfg||!cfg.apiKey||!window.firebase){goLocal("Saving on this device only");return;}
+ firebase.initializeApp(cfg);fbDb=firebase.firestore();
+ try{await fbDb.enablePersistence({synchronizeTabs:true});}catch(e){}
+ const prov=new firebase.auth.GoogleAuthProvider();
+ authBtn.hidden=false;
+ authBtn.onclick=async()=>{if(fbUser){await firebase.auth().signOut();return;}
+  try{await firebase.auth().signInWithPopup(prov);}catch(e){if(e&&/popup|operation-not-supported/i.test(e.code||""))firebase.auth().signInWithRedirect(prov);else alert("Sign-in failed: "+(e.message||e));}};
+ firebase.auth().getRedirectResult().catch(()=>{});
+ firebase.auth().onAuthStateChanged(async u=>{
+  fbUser=u;
+  if(!u){unsubs.forEach(x=>x());unsubs=[];authBtn.textContent="Sign in to sync";goLocal("Saving on this device only");return;}
+  authBtn.textContent="Sign out";
+  loadLocal();const local=hasLocalData();
+  db=scoped(fbDb,u.uid);mode="db";m.textContent="Synced · "+(u.email||"signed in");m.className="mode ok";
+  try{const p=await db.collection("progress").get(),j=await db.collection("journal").get(),st=await db.collection("settings").get();
+   if(local&&p.empty&&j.empty&&st.empty){await pushLocalToCloud();}}catch(e){}
+  listen();
+ });
+})();
+</script>
+
+<script>
+document.getElementById("bkBtn").onclick=()=>{
+ const d=document.createElement("div");d.className="bkdlg";d.innerHTML=`<div role="dialog" aria-modal="true" aria-label="Backup"><h3>Backup</h3><div class="small muted">Download all your ticks, journal, dates and plan as one file. Restore it on any device or browser.</div><button class="btn" id="bkOut">Download backup</button><label class="btn ghost" style="text-align:center;cursor:pointer">Restore from file<input type="file" id="bkIn" accept=".json,application/json" hidden></label><button class="lnk" id="bkX" style="justify-self:end">Close</button></div>`;
+ document.body.appendChild(d);const close=()=>d.remove();d.onclick=e=>{if(e.target===d)close();};d.querySelector("#bkX").onclick=close;
+ d.querySelector("#bkOut").onclick=()=>{const data={app:"shiva-exam-journal",v:1,at:new Date().toISOString(),exams:state.exams,progress:state.progress,dates:state.dates,revs:state.revs,journal:state.journal.filter(j=>!j.example),plan:state.plan};
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:"application/json"}));a.download="exam-journal-backup-"+iso(today())+".json";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);};
+ d.querySelector("#bkIn").onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{const x=JSON.parse(await f.text());if(x.app!=="shiva-exam-journal")throw new Error("Not an exam journal backup");
+  if(!confirm("Replace the data here with this backup from "+(x.at||"").slice(0,10)+"?"))return;
+  state.exams=x.exams||{};state.progress=x.progress||{};state.dates=x.dates||{};state.revs=x.revs||{};state.journal=x.journal||[];state.plan={techStart:"",nonStart:"",pyq:{},cur:{},...(x.plan||{})};
+  if(mode==="db"&&fbDb&&fbUser){await pushLocalToCloud();}else{saveLocal();}renderAll();close();alert("Backup restored.");}catch(e){alert("Could not restore: "+e.message);}};
+};
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
