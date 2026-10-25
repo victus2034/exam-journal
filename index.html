@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <title>Shiva's Exam Journal</title>
-<meta name="app-version" content="2026-10-25.13">
+<meta name="app-version" content="2026-10-25.14">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2c4bd1">
@@ -192,6 +192,14 @@ table.cmt td.est{background:var(--sunk);color:var(--fg)}
 .topic{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 14px;border-top:1px solid var(--line)}
 .topic:first-child{border-top:0}
 .topic .nm{font-size:.9rem}
+.tq{display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:3px;align-items:center}
+.dm{font-size:.66rem;font-weight:600;padding:1px 6px;border-radius:4px;white-space:nowrap}
+.dm.dH{background:var(--bad-soft,#fde8e8);color:var(--bad,#b42318)}.dm.dM{background:var(--warn-soft,#fef3c7);color:var(--warn,#a15c07)}.dm.dL{background:var(--line);color:var(--muted)}
+.tx{font-size:.72rem;color:var(--muted)}.topic.nx .nm>:first-child{opacity:.85}.nxl{color:var(--warn);font-weight:600}.tn{font-style:italic}
+.dmsep{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
+.cmtop{display:grid;gap:6px}.cmtl{display:grid;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.cmti{display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border-top:1px solid var(--line);font-size:.85rem}.cmti:first-child{border-top:0}.cmti span:last-child{white-space:nowrap}.cmti.dn span:first-child{text-decoration:line-through;color:var(--muted)}
+
 .sbtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 10px;font-size:.75rem;font-weight:600;cursor:pointer;min-width:84px;color:var(--muted)}
 .s1{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
 .s2{color:var(--ok);border-color:var(--ok);background:var(--ok-soft)}
@@ -452,28 +460,28 @@ const EXAMS=[
   stages:[{n:"CBT 1",d:"Maths 30 · Reasoning 25 · General Awareness 15 · General Science 30 · 100 Qs · 90 min · −1/3",m:["quant","advm","reas","gk","ca","sci"]},{n:"CBT 2",d:"GA 15 · Physics & Chemistry 15 · Computer 10 · Environment 10 · Technical 100 · 150 Qs · 2 hrs · −1/3",m:["gk","ca","sci","comp","env",...CIVIL]},{n:"DV + Medical",d:"",m:[]}],
   def:{date:"",confirmed:false,label:"CEN 04/2026 · 4,029 posts · applied 14 Aug–13 Sep 2026 · CBT 1 date TBA"},note:"CBT 1 is qualifying only. CBT 2 decides merit, so the civil part matters most."},
  {id:"mppscae",name:"MPPSC AE (State Engineering Services)",t:"tech",body:"MP Public Service Commission",
-  stages:[{n:"Written · Part A",d:"General Knowledge (MP, India, World) · 50 Qs · 150 marks",m:["gk","mpgk","ca","sci"]},{n:"Written · Part B",d:"Civil Engineering · 100 Qs · 300 marks · English only",m:CIVIL},{n:"Interview",d:"50 marks · total 500",m:[]}],
+  stages:[{n:"Written · Part A",d:"General Knowledge (MP, India, World): MP history, geography, polity, economy · current events · ICT (computers) · 50 Qs · 150 marks",m:["gk","mpgk","ca","comp"]},{n:"Written · Part B",d:"Civil Engineering · 100 Qs · 300 marks · English only",m:CIVIL},{n:"Interview",d:"50 marks · total 500",m:[]}],
   def:{date:"2027-03-21",confirmed:false,label:"Notification expected ~Dec 2026, exam ~Mar 2027"},note:"One 3-hour OMR paper with both parts. −1 mark per wrong answer. Recheck the official notification."},
  {id:"mpesb",name:"MPESB Sub Engineer (Group 3)",t:"tech",body:"MP Employees Selection Board",
-  stages:[{n:"Single CBT · Part A",d:"100 marks: GK, General Hindi, English, Maths, Reasoning, Science, Computer",m:["gk","mpgk","eng","quant","reas","sci","comp"]},{n:"Single CBT · Part B",d:"100 marks: Civil technical · 200 Qs total · 3 hrs",m:CIVIL},{n:"Document verification",d:"",m:[]}],
+  stages:[{n:"Single CBT · Part A",d:"100 Qs: GK + current affairs, General Hindi, English, Maths, Reasoning, Science, Computer · no negative marking",m:["gk","mpgk","ca","eng","quant","reas","sci","comp"]},{n:"Single CBT · Part B",d:"100 marks: Civil technical · 200 Qs total · 3 hrs",m:CIVIL},{n:"Document verification",d:"",m:[]}],
   def:{date:"2026-10-07",confirmed:true,label:"Group-3 (Second) 2026 · exam from 7 Oct 2026"},note:"General Hindi is also in Part A; it is not tracked here. The 2026 exam has started, so update your status in Exam dates."},
  {id:"mpdept",name:"MP dept JE/AE drives",t:"tech",body:"MP PWD, WRD, PHED, MPPKVVCL",
   stages:[{n:"Written test",d:"Mostly civil technical + MP GK",m:[...CIVIL,"mpgk","gk"]}],
   def:{date:"",confirmed:false,label:"Irregular drives"},note:"Track each department's site. Same civil prep as SSC JE."},
  {id:"fcije",name:"FCI JE (Civil)",t:"tech",body:"Food Corporation of India",
-  stages:[{n:"CBT",d:"Civil technical + reasoning, numerical aptitude, general awareness, computer",m:[...CIVIL,"reas","quant","gk","ca","comp"]},{n:"Document verification",d:"",m:[]}],
+  stages:[{n:"Phase 1 · CBT (qualifying)",d:"English 25 · Reasoning 25 · Numerical 25 · General Studies 25 · 100 Qs · 60 min · −1/4",m:["eng","reas","quant","gk","ca","comp"]},{n:"Phase 2 · Paper I",d:"English 25 · Reasoning 25 · Numerical 25 · General Studies 45 (GA, current events, computer) · 120 Qs · 90 min",m:["eng","reas","quant","gk","ca","comp"]},{n:"Phase 2 · Paper II",d:"Civil only · 60 Qs × 2 marks = 120 · 60 min · merit from Phase 2",m:CIVIL},{n:"Document verification",d:"",m:[]}],
   def:{date:"",confirmed:false,label:"No 2026 notification yet"},note:"Comes every 2–3 years. Civil prep for SSC JE covers most of it."},
  {id:"cgl",name:"SSC CGL",t:"non",body:"Staff Selection Commission",
   stages:[{n:"Tier 1 · CBT",d:"Reasoning 25 · GA 25 · Quant 25 · English 25 · 60 min · qualifying",m:["reas","gk","ca","sci","quant","advm","eng"]},{n:"Tier 2 · CBT",d:"Maths 30 · Reasoning 30 · English 45 · GA 25 · Computer 20 · DEST typing (some posts)",m:["quant","advm","reas","eng","gk","ca","comp"]},{n:"DV",d:"",m:[]}],
   def:{date:"2027-06-01",confirmed:false,label:"2027 notification ~Mar 2027"},note:"Typing test (DEST) applies only to some posts."},
  {id:"ntpc",name:"RRB NTPC (Graduate)",t:"non",body:"Railway Recruitment Boards",
-  stages:[{n:"CBT 1",d:"GA 40 · Maths 30 · Reasoning 30 · 90 min",m:["gk","ca","sci","quant","advm","reas"]},{n:"CBT 2",d:"GA 50 · Maths 35 · Reasoning 35 · 90 min",m:["gk","ca","sci","quant","advm","reas"]},{n:"Typing / CBAT, DV, Medical",d:"Depends on post",m:[]}],
+  stages:[{n:"CBT 1",d:"GA 40 (incl. basics of computers) · Maths 30 · Reasoning 30 · 90 min",m:["gk","ca","sci","comp","quant","advm","reas"]},{n:"CBT 2",d:"GA 50 (incl. basics of computers) · Maths 35 · Reasoning 35 · 90 min",m:["gk","ca","sci","comp","quant","advm","reas"]},{n:"Typing / CBAT, DV, Medical",d:"Depends on post",m:[]}],
   def:{date:"",confirmed:false,label:"Check rrbapply.gov.in"},note:"GA has the most weight. Static GK and science are key."},
  {id:"ibps",name:"IBPS PO / Clerk",t:"non",body:"Institute of Banking Personnel Selection",
   stages:[{n:"Prelims",d:"Quant 35 Qs (30 marks) · Reasoning 35 (40) · English 30 (30) · 60 min",m:["eng","bdi","quant","breas"]},{n:"Mains",d:"Reasoning 40 · GA/Banking/Digital 35 · English 35 · DA&I 35 · Descriptive 25 marks",m:["breas","bdi","quant","eng","bank","ca","desc"]},{n:"Interview (PO only)",d:"",m:[]}],
   def:{date:"2027-08-15",confirmed:false,label:"PO prelims usually Aug"},note:"Revised pattern from 2025. Clerk has no interview. Puzzles and DI decide the cutoff."},
  {id:"sbi",name:"SBI PO / Clerk",t:"non",body:"State Bank of India",
-  stages:[{n:"Prelims",d:"English 40 · Quant 30 · Reasoning 30 · 60 min",m:["eng","bdi","quant","breas"]},{n:"Mains",d:"Reasoning & Computer · DA&I · GA/Banking · English + Descriptive 50 marks (email, report, précis)",m:["breas","bdi","quant","eng","bank","ca","comp","desc"]},{n:"Psychometric + GE + Interview (PO)",d:"",m:[]}],
+  stages:[{n:"Prelims",d:"English 40 · Quant 30 · Reasoning 30 · 60 min",m:["eng","bdi","quant","breas"]},{n:"Mains",d:"Reasoning & Computer 40 Qs (60) · DA&I 30 (60) · GA/Economy/Banking 50 (60) · English 35 (40) · Descriptive 50 marks (letter + essay)",m:["breas","bdi","quant","eng","bank","ca","comp","desc"]},{n:"Psychometric + GE + Interview (PO)",d:"",m:[]}],
   def:{date:"",confirmed:false,label:"Watch sbi.bank.in careers"},note:"SBI Clerk prelims/mains has no interview."},
  {id:"rbi",name:"RBI Grade B / Assistant",t:"non",body:"Reserve Bank of India",
   stages:[{n:"Grade B Phase 1",d:"GA 80 · English 30 · Quant 30 · Reasoning 60 · 200 marks",m:["gk","ca","bank","eng","quant","bdi","breas"]},{n:"Grade B Phase 2",d:"ESI 100 · English descriptive 100 · Finance & Management 100",m:["esi","fmgt","eng","desc"]},{n:"Assistant prelims + mains, LPT",d:"Bank-style quant, reasoning, English, GA, computer",m:["comp"]},{n:"Interview (Grade B)",d:"75 marks",m:[]}],
@@ -592,7 +600,7 @@ function examPct(e){let d=0,t=0;examMods(e).forEach(m=>{const p=modPct(m);d+=p.d
 const sortedJournal=()=>[...state.journal].sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.createdAt||0)-(a.createdAt||0));
 
 /* ---------------- RENDER ---------------- */
-let curTab="overview", curExam="sscje", curSrc="";
+let curTab="overview", curExam="sscje", curSrc="", curDem="";
 const openMods=new Set();
 function showTab(t){curTab=t;document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));document.querySelectorAll(".view").forEach(v=>v.hidden=v.id!=="v-"+t);try{history.replaceState(null,"","#"+t);}catch(e){}window.scrollTo(0,0);renderAll();}
 
@@ -722,21 +730,42 @@ function overviewHtml(e){
 const EXS={sscje:"SSC JE",rrbje:"RRB JE",mppscae:"MPPSC AE",mpesb:"MPESB",mpdept:"MP dept",fcije:"FCI JE",cgl:"SSC CGL",ntpc:"NTPC",ibps:"IBPS PO",sbi:"SBI PO",rbi:"RBI"};
 // [text, estimate?] per exam per subject. Qs unless "marks". Civil split for non-SSC boards is my estimate from SSC JE Paper 2 share.
 const EXW=(()=>{const W={};const put=(e,m,t,est)=>{(W[e]=W[e]||{})[m]=[t,!!est];};
- CIVIL.forEach(m=>{const w=GUIDE[m].wt;const t=w?String(w):"0–2";put("sscje",m,t);["rrbje","mppscae","mpesb","fcije"].forEach(e=>put(e,m,"~"+t,1));put("mpdept",m,"✓");});
+ CIVIL.forEach(m=>{const w=GUIDE[m].wt;const t=w?String(w):"0–2";put("sscje",m,t);["rrbje","mppscae","mpesb"].forEach(e=>put(e,m,"~"+t,1));put("fcije",m,"~"+(w?String(Math.max(1,Math.round(w*0.6))):"0–1"),1);put("mpdept",m,"✓");});
  put("rrbje","env","~6 + 10",1);
  [["reas","50"],["gk","Section 50"],["sci","Section 50"],["ca","Section 50"]].forEach(([m,t])=>put("sscje",m,t));
  [["quant","Maths 30"],["advm","Maths 30"],["reas","25"],["gk","GA 15+15"],["ca","GA 15+15"],["sci","30 + 15"],["comp","10"]].forEach(([m,t])=>put("rrbje",m,t));
- ["gk","mpgk","ca","sci"].forEach(m=>put("mppscae",m,"Part A 50"));
- ["gk","mpgk","eng","quant","reas","sci","comp"].forEach(m=>put("mpesb",m,"Part A 100 marks"));
+ ["gk","mpgk","ca","comp"].forEach(m=>put("mppscae",m,"Part A 50"));
+ ["gk","mpgk","ca","eng","quant","reas","sci","comp"].forEach(m=>put("mpesb",m,"Part A 100"));
  ["gk","mpgk"].forEach(m=>put("mpdept",m,"✓"));
- ["reas","quant","gk","ca","comp"].forEach(m=>put("fcije",m,"✓"));
+ [["eng","25 · 25"],["reas","25 · 25"],["quant","25 · 25"],["gk","GS 25 · 45"],["ca","GS 25 · 45"],["comp","in GS"]].forEach(([m,t])=>put("fcije",m,t));
  [["reas","25 · 30"],["quant","25 · 30"],["advm","25 · 30"],["eng","25 · 45"],["gk","GA 25 · 25"],["ca","GA 25 · 25"],["sci","GA 25"],["comp","T2 20"]].forEach(([m,t])=>put("cgl",m,t));
- [["gk","GA 40 · 50"],["ca","GA 40 · 50"],["sci","GA 40 · 50"],["quant","30 · 35"],["advm","30 · 35"],["reas","30 · 35"]].forEach(([m,t])=>put("ntpc",m,t));
+ [["gk","GA 40 · 50"],["ca","GA 40 · 50"],["sci","GA 40 · 50"],["comp","GA 2–4"],["quant","30 · 35"],["advm","30 · 35"],["reas","30 · 35"]].forEach(([m,t])=>put("ntpc",m,t));
  [["eng","30 · 35"],["quant","Pre 35"],["bdi","Pre 35 · M 35"],["breas","Pre 35 · M 40"],["bank","M 35"],["ca","M 35"],["desc","25 marks"]].forEach(([m,t])=>put("ibps",m,t));
- [["eng","Pre 40 · M ✓"],["quant","Pre 30"],["bdi","Pre 30 · M ✓"],["breas","Pre 30 · M ✓"],["bank","M ✓"],["ca","M ✓"],["comp","M ✓"],["desc","50 marks"]].forEach(([m,t])=>put("sbi",m,t));
+ [["eng","Pre 40 · M 35"],["quant","Pre 30"],["bdi","Pre 30 · M 30"],["breas","Pre 30 · M 40"],["bank","M 50"],["ca","M 50"],["comp","M (in Reas 40)"],["desc","50 marks"]].forEach(([m,t])=>put("sbi",m,t));
  [["gk","GA 80"],["ca","GA 80"],["bank","GA 80"],["eng","30 · 100 marks"],["quant","30"],["bdi","30"],["breas","60"],["esi","100 marks"],["fmgt","100 marks"],["desc","Eng 100 marks"],["comp","Asst ✓"]].forEach(([m,t])=>put("rbi",m,t));
  return W;})();
 const examsOf=m=>EXAMS.filter(e=>examMods(e).includes(m));
+/* ---------------- TOPIC DEMAND: H/M/L per topic, in MODS order. From PYQ analyses (SSC/RRB/IBPS 2018–2025) + my judgement for civil. */
+const TD={bm:"MHMMHHHHMMMHLLL",est:"HHHMMHMHMML",surv:"MHHHMLMMHHMLHMLL",sm:"MMHMMHHHHMHHHLMMMM",sa:"HHMLMMMMHLLML",rcc:"HMHHMMHLHMHMLLLMH",steel:"MHHHHMMLMLM",soil:"HHHHLHLMMMHHHMLHMMLM",fm:"HHMMMHLHMHMMLLM",ocf:"MHHMLL",hm:"LMHH",hyd:"HMMLMHMM",irr:"HMHMMMMLL",trans:"MHHHMHMLMMLHMLL",env:"HHLHMHHLMMHMMMLM",const:"MLLLLLMMHHMLLLL",
+ quant:"HMHMHHHHHHMHMMMML",advm:"HMHMHMHHHMLMH",bdi:"HHHMMMHMMM",reas:"HHHHMMMMMHMMMMMLLM",breas:"HHHHHMHHMMMLMMM",eng:"HHHMMHMMMMMMHM",desc:"HHMMMMH",gk:"HMHHHHLMHMMML",sci:"HMMHHMMHHMM",ca:"HMHMHHMMH",bank:"MHMHHMMMHH",comp:"HHMHMMLHM",esi:"HHMMMLHH",fmgt:"HHMHMHHMM",mpgk:"HHHHMMHHMH"};
+const DEM={H:["High","bad"],M:["Medium","warn"],L:["Low","muted"]};
+// Topic asked only in these exams ("-" = all of the subject's exams except these)
+const SSCISH=["rrbje","mpesb","fcije","cgl","ntpc"],BANKS=["ibps","sbi","rbi"];
+const TEX={quant:{3:SSCISH,15:[...BANKS,"fcije"],16:[...BANKS,"cgl"]},advm:{10:["cgl"],12:["cgl"]},
+ eng:{7:["mpesb","fcije","cgl"],8:["mpesb","fcije","cgl"],9:["mpesb","fcije","cgl"],10:["mpesb","fcije","cgl"],11:["mpesb","fcije","cgl"],13:BANKS},
+ desc:{2:["ibps","rbi"],3:["rbi"],4:["sbi"],5:["sbi"]},breas:{11:["ibps","sbi"],14:["sbi","rbi","ibps"]},
+ gk:{0:"-mppscae",1:"-mppscae",2:"-mppscae",3:"-mppscae",4:"-mppscae",5:"-mppscae",6:"-mppscae",7:"-mppscae",8:"-mppscae",11:"-mppscae"},
+ comp:{2:"-mppscae",3:"-mppscae",6:["sbi","rbi","mpesb","rrbje"],8:"-mppscae"}};
+// Short notes: PYQ counts or level
+const TNT={sa:{9:"AE level, rare in JE",10:"AE level",12:"AE level"},ocf:{4:"AE level"},steel:{7:"AE level"},sm:{13:"AE level"},
+ quant:{2:"IBPS 5–6 Qs",0:"CGL 2–3 Qs"},advm:{12:"CGL ~5 Qs",8:"CGL 2–3 Qs",6:"CGL 2–3 Qs"},bdi:{3:"IBPS DI 10–12 Qs total",1:"IBPS 3–4 Qs"},
+ reas:{3:"CGL 3–4 · SSC JE ~5 Qs",2:"CGL 2–3 · SSC JE ~5 Qs",4:"SSC JE ~5 Qs",9:"CGL 2–3 Qs"},breas:{0:"IBPS puzzles 12–15 Qs",3:"IBPS seating 8–10 Qs",6:"IBPS ~2 Qs"},
+ eng:{0:"CGL ~5 · IBPS 8–10 Qs",1:"IBPS 5–7 Qs",2:"CGL 2–3 · IBPS 5–7 Qs",5:"CGL 2–3 · IBPS 3–5 Qs"},
+ gk:{2:"NTPC history 5–8 Qs"},sci:{0:"NTPC science 7–10 Qs",7:"NTPC science 7–10 Qs"},ca:{0:"NTPC 10–15 · IBPS 8–10 Qs"},bank:{1:"IBPS RBI policy ~6 Qs",9:"IBPS digital ~6 Qs"},comp:{0:"NTPC 2–4 Qs"},
+ const:{8:"Most asked in CPM",9:"Most asked in CPM"}};
+function topicExams(m,k){const all=examsOf(m).map(e=>e.id);const r=(TEX[m]||{})[k];if(!r)return all;if(typeof r==="string"){const x=r.slice(1).split(",");return all.filter(e=>!x.includes(e));}return all.filter(e=>r.includes(e));}
+const topicDem=(m,k)=>(TD[m]||"")[k]||"M";
+
 const cm={type:"all",exams:new Set(),match:"any",min:0,subs:new Set(),sel:null};
 function cmRows(){
  return Object.keys(MODS).filter(m=>examsOf(m).length).filter(m=>{
@@ -753,6 +782,8 @@ function cmDetailHtml(m){
  <div class="cmk"><div><span class="label">In exams</span><b class="num" id="cmd-n">${ex.length} / ${EXAMS.length}</b></div><div><span class="label">Commonness</span><b class="num">${Math.round(ex.length*100/EXAMS.length)}%</b></div><div><span class="label">Value</span><b><span class="gc imp-${vc}">${vl}</span></b></div><div><span class="label">Your progress</span><b class="num">${p}%</b><span class="small muted">${pc.done}/${pc.total} topics</span></div></div>
  <div class="cmlist" id="cmd-list">${ex.map(e=>{const c=EXW[e.id][m];return `<div class="cmli"><button class="lnk" data-exam="${e.id}"><b>${esc(e.name)}</b></button><span class="small muted">${modStages(e,m).map(x=>esc(x.split(" · ")[0])).join(" + ")}</span><span class="cmw ${c[1]?"est":"on"}">${esc(c[0])}</span></div>`;}).join("")}</div>
  ${EXAMS.length-ex.length?`<div class="small muted">Not in: ${EXAMS.filter(e=>!ex.includes(e)).map(e=>EXS[e.id]).join(", ")}</div>`:""}
+ ${(()=>{const T=MODS[m].t.map((t,k)=>({t,k,d:topicDem(m,k),n:topicExams(m,k).length,done:((state.progress[m]||{})[MODS[m].ids[k]]||0)>=2}));const c=x=>T.filter(o=>o.d===x).length;
+  return `<div class="cmtop"><div class="row"><b class="small">High-demand topics</b><span class="small muted">${c("H")} high · ${c("M")} medium · ${c("L")} low</span></div><div class="cmtl" id="cmd-topics">${T.filter(o=>o.d==="H").map(o=>`<div class="cmti${o.done?" dn":""}"><span>${esc(o.t)}</span><span class="small muted">${o.n} exam${o.n>1?"s":""}${o.done?" · done":""}</span></div>`).join("")}</div></div>`;})()}
  <button class="btn sm" data-open="${m}" style="justify-self:start">Open topics →</button>`;
 }
 function renderCommon(){
@@ -787,7 +818,8 @@ const UPDATES=[
  {v:"2026-10-25.10",n:"Update log",i:["Every update logged"]},
  {v:"2026-10-25.11",n:"Version pill",i:["Version number next to the title, like Victus Journal"]},
  {v:"2026-10-25.12",n:"What's new on tap",i:["Tap the version number to see this list","Nothing extra on the dashboard"]},
- {v:"2026-10-25.13",n:"Common: free filters",i:["Pick Technical / Non-tech, any exams (any or all), 3+/5+/7+ shared, and your own subjects","Tap a subject to see its value: exams, weightage in each, commonness %"]}
+ {v:"2026-10-25.13",n:"Common: free filters",i:["Pick Technical / Non-tech, any exams (any or all), 3+/5+/7+ shared, and your own subjects","Tap a subject to see its value: exams, weightage in each, commonness %"]},
+ {v:"2026-10-25.14",n:"Topic demand + exam fixes",i:["Every topic shows High / Medium / Low demand and which exams ask it","Syllabus: filter topics by demand","Subject value card lists its high-demand topics","Fixed: FCI JE English + 2 phases, MPESB current affairs, NTPC computers, MPPSC AE ICT, SBI mains split"]}
 ];
 const appVer=()=>(document.querySelector('meta[name="app-version"]')||{}).content||"";
 const short=v=>"v"+v.slice(5);
@@ -804,11 +836,11 @@ function renderSyllabus(){
  ${overviewHtml(e)}
  <div class="stages">${e.stages.map(s=>`<div class="stage"><b>${esc(s.n)}</b><span class="small muted">${esc(s.d)}</span></div>`).join("")}</div>
  ${e.note?`<div class="note">${esc(e.note)}</div>`:""}`;
- document.getElementById("srcf").innerHTML=[["","All topics"],["=","Match"],["-","No match"],["+","My material"]].map(f=>`<button class="chip" data-src="${f[0]}" aria-pressed="${f[0]===curSrc}">${f[1]}</button>`).join("");
- document.getElementById("mods").innerHTML=examMods(e).sort((a,b)=>(isTech(b)-isTech(a))||orderOf[a]-orderOf[b]).filter(m=>!curSrc||MODS[m].src.includes(curSrc)).map(m=>{const M=MODS[m];const pc=modPct(m);const pr=state.progress[m]||{};const open=openMods.has(m);
+ document.getElementById("srcf").innerHTML=[["","All topics"],["=","Match"],["-","No match"],["+","My material"]].map(f=>`<button class="chip" data-src="${f[0]}" aria-pressed="${f[0]===curSrc}">${f[1]}</button>`).join("")+`<span class="dmsep"></span>`+[["","Any demand"],["H","High"],["M","Medium"],["L","Low"]].map(f=>`<button class="chip" data-dem="${f[0]}" aria-pressed="${f[0]===curDem}">${f[1]}</button>`).join("");
+ document.getElementById("mods").innerHTML=examMods(e).sort((a,b)=>(isTech(b)-isTech(a))||orderOf[a]-orderOf[b]).filter(m=>(!curSrc||MODS[m].src.includes(curSrc))&&(!curDem||MODS[m].t.some((_,k)=>topicDem(m,k)===curDem&&(!curSrc||MODS[m].src[k]===curSrc)))).map(m=>{const M=MODS[m];const pc=modPct(m);const pr=state.progress[m]||{};const open=openMods.has(m);
     return `<div class="mod ${open?"open":""}"><button class="modhead" data-mod="${m}" aria-expanded="${open}"><div style="min-width:0"><div class="t">${esc(M.n)}</div><div class="tags">${GUIDE[m]?chips(m):""}${M.g==="civil"?(M.folder?`<span class="fold">📁 ${esc(M.folder)}</span>`:`<span class="tg">No folder in your material</span>`):""}${M.g==="civil"?`<span class="gx">${M.src.filter(x=>x==="=").length} match · ${M.src.filter(x=>x==="-").length} no match · ${M.src.filter(x=>x==="+").length} mine</span>`:""}${e.stages.length>1?`<span class="gx">${modStages(e,m).map(s=>esc(s.split(" · ")[0])).join(" + ")}</span>`:""}</div></div>
   <div style="display:grid;gap:3px"><span class="small num muted">${pc.done}/${pc.total}</span><div class="bar"><i style="width:${Math.round(pc.done*100/pc.total)}%"></i></div></div><span class="caret">▸</span></button>
-  ${open?`<div class="topics">${M.t.map((t,k)=>{if(curSrc&&M.src[k]!==curSrc)return "";const v=pr[M.ids[k]]||0;const sg=SRC[M.src[k]];return `<div class="topic"><span class="nm">${esc(t)}${sg?`<span class="mt ${sg[1]}">${sg[0]}</span>`:""}</span><button class="sbtn ${v?"s"+v:""}" data-m="${m}" data-k="${k}">${TSTATE[v]}</button></div>`;}).join("")}</div>
+  ${open?`<div class="topics">${M.t.map((t,k)=>{if(curSrc&&M.src[k]!==curSrc)return "";const dm=topicDem(m,k);if(curDem&&dm!==curDem)return "";const v=pr[M.ids[k]]||0;const sg=SRC[M.src[k]];const te=topicExams(m,k);const nt=(TNT[m]||{})[k];const nx=!te.includes(curExam);return `<div class="topic${nx?" nx":""}"><span class="nm">${esc(t)}${sg?`<span class="mt ${sg[1]}">${sg[0]}</span>`:""}<span class="tq"><span class="dm d${dm}">${DEM[dm][0]} demand</span><span class="tx">${te.length} exam${te.length>1?"s":""}: ${te.map(x=>esc(EXS[x])).join(", ")}</span>${nt?`<span class="tx tn">${esc(nt)}</span>`:""}${nx?`<span class="tx nxl">Not asked in ${esc(EXS[curExam])}</span>`:""}</span></span><button class="sbtn ${v?"s"+v:""}" data-m="${m}" data-k="${k}">${TSTATE[v]}</button></div>`;}).join("")}</div>
   <div class="modtools"><button class="lnk" data-all="${m}" data-v="2">Mark all done</button><button class="lnk" data-all="${m}" data-v="0">Reset</button></div>`:""}</div>`;}).join("");
 }
 function renderExTable(){
@@ -933,6 +965,7 @@ document.addEventListener("click",ev=>{
  if(b.dataset.tab)showTab(b.dataset.tab);
  else if(b.dataset.go)showTab(b.dataset.go);
  else if(b.dataset.exam){curExam=b.dataset.exam;renderSyllabus();showTab("syllabus");}
+ else if(b.dataset.dem!==undefined){curDem=b.dataset.dem;if(curDem)examMods(EXBY[curExam]).forEach(m=>{if(MODS[m].t.some((_,k)=>topicDem(m,k)===curDem))openMods.add(m);});renderSyllabus();}
  else if(b.dataset.src!==undefined){curSrc=b.dataset.src;if(curSrc)examMods(EXBY[curExam]).forEach(m=>{if(MODS[m].src.includes(curSrc))openMods.add(m);});renderSyllabus();}
  else if(b.dataset.sel){curExam=b.dataset.sel;renderSyllabus();}
  else if(b.dataset.mod){const m=b.dataset.mod;openMods.has(m)?openMods.delete(m):openMods.add(m);renderSyllabus();}
@@ -949,7 +982,7 @@ document.addEventListener("click",ev=>{
  else if(b.dataset.cmn!==undefined){cm.min=+b.dataset.cmn;renderCommon();}
  else if(b.dataset.cmclr){cm.type="all";cm.exams.clear();cm.match="any";cm.min=0;cm.subs.clear();renderCommon();}
  else if(b.dataset.cmsel!==undefined){cm.sel=b.dataset.cmsel||null;renderCommon();if(cm.sel)document.getElementById("cmdetail").scrollIntoView({behavior:"smooth",block:"nearest"});}
- else if(b.dataset.open){const m=b.dataset.open;const ex=EXAMS.find(e=>e.id===curExam&&examMods(e).includes(m))||EXAMS.find(e=>examMods(e).includes(m));curExam=ex.id;curSrc="";openMods.add(m);renderSyllabus();showTab("syllabus");}
+ else if(b.dataset.open){const m=b.dataset.open;const ex=EXAMS.find(e=>e.id===curExam&&examMods(e).includes(m))||EXAMS.find(e=>examMods(e).includes(m));curExam=ex.id;curSrc="";curDem="";openMods.add(m);renderSyllabus();showTab("syllabus");}
  else if(b.dataset.del){if(b.dataset.confirm){pendingDel=null;delEntry(b.dataset.del);}else{pendingDel=b.dataset.del;renderLedger();setTimeout(()=>{if(pendingDel===b.dataset.del){pendingDel=null;renderLedger();}},4000);}}
 });
 document.getElementById("extable").addEventListener("focusin",()=>exTableFocus=true);
