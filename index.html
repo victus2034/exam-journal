@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <title>Shiva's Exam Journal</title>
-<meta name="app-version" content="2026-10-25.12">
+<meta name="app-version" content="2026-10-25.13">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2c4bd1">
@@ -154,6 +154,27 @@ table.cmt td.est{background:var(--sunk);color:var(--fg)}
 .dlgbox{background:var(--surface);color:var(--fg);border-radius:12px;padding:18px;max-width:480px;width:100%;display:grid;gap:12px;max-height:85vh;overflow:auto}
 .uplog{display:grid;gap:10px}.upi{border-top:1px solid var(--line);padding-top:8px;display:grid;gap:2px}
 .mono{font-family:"IBM Plex Mono",monospace}
+.cmfil{display:grid;gap:8px}
+.cmrow{display:flex;gap:8px 10px;align-items:center;flex-wrap:wrap}
+.cmrow>.label{min-width:72px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg .chip{font-size:.8rem;padding:4px 10px}
+.cmpick{position:relative}
+.cmpick summary{cursor:pointer;list-style:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:.8rem;background:var(--surface)}
+.cmpick summary::-webkit-details-marker{display:none}
+.cmpick[open] summary{border-color:var(--accent);color:var(--accent)}
+.cmdone{position:sticky;bottom:0;width:100%;margin-top:6px}
+.cmpl{position:absolute;z-index:20;top:calc(100% + 6px);left:0;width:min(320px,80vw);max-height:360px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:4px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.cmpl .chk{font-size:.84rem}
+.cmdet{display:grid;gap:12px;border-color:var(--accent)}
+.cmk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.cmk>div{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--sunk);display:grid;gap:2px}
+.cmk b{font-size:1.1rem}
+.cmlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.cmli{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:grid;gap:2px}
+.cmw{font-size:.82rem;font-weight:600;justify-self:start;padding:1px 8px;border-radius:5px}
+.cmw.on{background:var(--accent-soft);color:var(--accent)}.cmw.est{background:var(--sunk);border:1px dashed var(--line)}
+@media (max-width:520px){.cmk{grid-template-columns:repeat(2,minmax(0,1fr))}.cmrow>.label{min-width:100%}}
 .syncbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .bkdlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50;padding:16px}
 .bkdlg>div{background:var(--surface);color:var(--fg);border-radius:12px;padding:18px;max-width:420px;width:100%;display:grid;gap:12px}
@@ -341,8 +362,8 @@ textarea{min-height:62px;resize:vertical}
  <!-- COMMON -->
  <section id="v-common" class="view" hidden style="display:grid;gap:16px">
   <div class="panel"><div class="row"><h3>Study once, use in many exams</h3><span class="small muted">Subjects shared by the most exams</span></div><div class="cmtop" id="cmtop"></div></div>
-  <div class="chips" id="cmf"></div>
-  <div class="panel" style="padding:0;overflow:hidden;gap:0"><div style="padding:14px 16px;display:grid;gap:4px"><h3>Subject × exam weightage</h3><div class="small muted">Each cell = questions (or marks) for that subject in that exam. <b>~</b> = my estimate from SSC JE Paper 2 share, because the board does not publish a split. <b>Section 50</b> = the subject shares a 50-Q section with others. <b>✓</b> = in syllabus, size not fixed. Tap a subject to open its topics, or an exam to open its syllabus.</div></div><div class="seqwrap" id="cmtable"></div></div>
+  <div class="panel cmdet" id="cmdetail" hidden></div>
+  <div class="panel" style="padding:0;overflow:hidden;gap:0"><div style="padding:14px 16px;display:grid;gap:10px"><div class="row"><h3>Subject × exam weightage</h3><span class="small muted" id="cmcount"></span></div><div class="cmfil" id="cmf"></div><div class="small muted">Each cell = questions (or marks) for that subject in that exam. <b>~</b> = my estimate from SSC JE Paper 2 share, because the board does not publish a split. <b>Section 50</b> = the subject shares a 50-Q section with others. <b>✓</b> = in syllabus, size not fixed. Tap a subject to see its value across exams.</div></div><div class="seqwrap" id="cmtable"></div></div>
  </section>
 
  <!-- JOURNAL -->
@@ -716,18 +737,42 @@ const EXW=(()=>{const W={};const put=(e,m,t,est)=>{(W[e]=W[e]||{})[m]=[t,!!est];
  [["gk","GA 80"],["ca","GA 80"],["bank","GA 80"],["eng","30 · 100 marks"],["quant","30"],["bdi","30"],["breas","60"],["esi","100 marks"],["fmgt","100 marks"],["desc","Eng 100 marks"],["comp","Asst ✓"]].forEach(([m,t])=>put("rbi",m,t));
  return W;})();
 const examsOf=m=>EXAMS.filter(e=>examMods(e).includes(m));
-let cmFilter="all";
+const cm={type:"all",exams:new Set(),match:"any",min:0,subs:new Set(),sel:null};
+function cmRows(){
+ return Object.keys(MODS).filter(m=>examsOf(m).length).filter(m=>{
+  if(cm.type==="tech"&&!isTech(m))return false;if(cm.type==="non"&&isTech(m))return false;
+  if(cm.subs.size&&!cm.subs.has(m))return false;
+  if(examsOf(m).length<cm.min)return false;
+  if(cm.exams.size){const ids=examsOf(m).map(e=>e.id);const hit=[...cm.exams].filter(x=>ids.includes(x)).length;if(cm.match==="all"?hit<cm.exams.size:hit===0)return false;}
+  return true;}).sort((a,b)=>examsOf(b).length-examsOf(a).length||(isTech(b)-isTech(a))||orderOf[a]-orderOf[b]);
+}
+function cmValue(m){const n=examsOf(m).length;return n>=7?["Very high","bad"]:n>=5?["High","warn"]:n>=3?["Medium","non"]:["Exam-specific","muted"];}
+function cmDetailHtml(m){
+ const ex=examsOf(m),pc=modPct(m),p=Math.round(pc.done*100/pc.total),[vl,vc]=cmValue(m);
+ return `<div class="row"><div style="min-width:0"><span class="sd ${isTech(m)?"tech":"non"}">${isTech(m)?"Tech":"Non-tech"}</span> <h3 style="display:inline">${esc(MODS[m].n)}</h3></div><button class="lnk" data-cmsel="">Close</button></div>
+ <div class="cmk"><div><span class="label">In exams</span><b class="num" id="cmd-n">${ex.length} / ${EXAMS.length}</b></div><div><span class="label">Commonness</span><b class="num">${Math.round(ex.length*100/EXAMS.length)}%</b></div><div><span class="label">Value</span><b><span class="gc imp-${vc}">${vl}</span></b></div><div><span class="label">Your progress</span><b class="num">${p}%</b><span class="small muted">${pc.done}/${pc.total} topics</span></div></div>
+ <div class="cmlist" id="cmd-list">${ex.map(e=>{const c=EXW[e.id][m];return `<div class="cmli"><button class="lnk" data-exam="${e.id}"><b>${esc(e.name)}</b></button><span class="small muted">${modStages(e,m).map(x=>esc(x.split(" · ")[0])).join(" + ")}</span><span class="cmw ${c[1]?"est":"on"}">${esc(c[0])}</span></div>`;}).join("")}</div>
+ ${EXAMS.length-ex.length?`<div class="small muted">Not in: ${EXAMS.filter(e=>!ex.includes(e)).map(e=>EXS[e.id]).join(", ")}</div>`:""}
+ <button class="btn sm" data-open="${m}" style="justify-self:start">Open topics →</button>`;
+}
 function renderCommon(){
  const all=Object.keys(MODS).filter(m=>examsOf(m).length);
  const top=[...all].sort((a,b)=>examsOf(b).length-examsOf(a).length||orderOf[a]-orderOf[b]).slice(0,6);
- document.getElementById("cmtop").innerHTML=top.map(m=>{const ex=examsOf(m);return `<button class="cmc" data-open="${m}"><span class="num cmn">${ex.length}</span><span style="min-width:0"><b>${esc(MODS[m].n)}</b><span class="small muted">${ex.length} of ${EXAMS.length} exams · ${ex.map(e=>EXS[e.id]).join(", ")}</span></span></button>`;}).join("");
- document.getElementById("cmf").innerHTML=[["all","All subjects"],["tech","Technical"],["non","Non-tech"],["many","In 5+ exams"]].map(f=>`<button class="chip" data-cmf="${f[0]}" aria-pressed="${f[0]===cmFilter}">${f[1]}</button>`).join("");
- const rows=all.filter(m=>cmFilter==="all"||(cmFilter==="tech"&&isTech(m))||(cmFilter==="non"&&!isTech(m))||(cmFilter==="many"&&examsOf(m).length>=5))
-  .sort((a,b)=>examsOf(b).length-examsOf(a).length||(isTech(b)-isTech(a))||orderOf[a]-orderOf[b]);
- document.getElementById("cmtable").innerHTML=`<table class="seq cmt"><thead><tr><th>Subject</th><th>In</th>${EXAMS.map(e=>`<th><button class="lnk cmh ${e.t}" data-exam="${e.id}">${EXS[e.id]}</button></th>`).join("")}</tr></thead><tbody>${rows.map(m=>{const pc=modPct(m),p=Math.round(pc.done*100/pc.total);
-  return `<tr data-cmrow="${m}"><td><button class="lnk cms" data-open="${m}"><span class="sd ${isTech(m)?"tech":"non"}">${isTech(m)?"Tech":"Non-tech"}</span> ${esc(MODS[m].n)}</button><div class="small muted">${pc.total} topics · ${p}% done</div></td><td class="num"><b>${examsOf(m).length}</b></td>${EXAMS.map(e=>{const c=(EXW[e.id]||{})[m];return `<td class="cmv ${c?(c[1]?"est":"on"):""}">${c?esc(c[0]):""}</td>`;}).join("")}</tr>`;}).join("")}</tbody></table>`;
+ document.getElementById("cmtop").innerHTML=top.map(m=>{const ex=examsOf(m);return `<button class="cmc" data-cmsel="${m}"><span class="num cmn">${ex.length}</span><span style="min-width:0"><b>${esc(MODS[m].n)}</b><span class="small muted">${ex.length} of ${EXAMS.length} exams · ${ex.map(e=>EXS[e.id]).join(", ")}</span></span></button>`;}).join("");
+ const seg=(k,opts,cur)=>`<div class="seg" role="group">${opts.map(([v,l])=>`<button class="chip" data-${k}="${v}" aria-pressed="${String(v)===String(cur)}">${l}</button>`).join("")}</div>`;
+ const pick=(ms)=>ms.map(m=>`<label class="chk"><input type="checkbox" data-cms="${m}" ${cm.subs.has(m)?"checked":""}> ${esc(MODS[m].n)}</label>`).join("");
+ const openPick=document.querySelector("#cmf details[open]")!==null;
+ document.getElementById("cmf").innerHTML=`
+  <div class="cmrow"><span class="label">Type</span>${seg("cmt",[["all","All"],["tech","Technical only"],["non","Non-tech only"]],cm.type)}</div>
+  <div class="cmrow"><span class="label">Exams</span><div class="seg">${EXAMS.map(e=>`<button class="chip ${e.t}" data-cmx="${e.id}" aria-pressed="${cm.exams.has(e.id)}">${EXS[e.id]}</button>`).join("")}</div>${cm.exams.size>1?seg("cmm",[["any","In any of them"],["all","In all of them"]],cm.match):""}</div>
+  <div class="cmrow"><span class="label">Shared by</span>${seg("cmn",[[0,"Any"],[3,"3+ exams"],[5,"5+ exams"],[7,"7+ exams"]],cm.min)}</div>
+  <div class="cmrow"><span class="label">Subjects</span><details class="cmpick" ${openPick?"open":""}><summary>${cm.subs.size?cm.subs.size+" picked":"Pick subjects"}</summary><div class="cmpl"><div class="label">Technical</div>${pick(all.filter(isTech).sort((a,b)=>orderOf[a]-orderOf[b]))}<div class="label">Non-tech</div>${pick(all.filter(m=>!isTech(m)).sort((a,b)=>orderOf[a]-orderOf[b]))}<button class="btn sm cmdone" data-cmdone="1">Done</button></div></details>${(cm.type!=="all"||cm.exams.size||cm.min||cm.subs.size)?`<button class="lnk" data-cmclr="1">Clear all filters</button>`:""}</div>`;
+ const rows=cmRows();const cols=cm.exams.size?EXAMS.filter(e=>cm.exams.has(e.id)):EXAMS;
+ document.getElementById("cmcount").textContent=`${rows.length} subject${rows.length===1?"":"s"} · ${cols.length} exam${cols.length===1?"":"s"}`;
+ document.getElementById("cmtable").innerHTML=rows.length?`<table class="seq cmt" style="min-width:${260+cols.length*95}px"><thead><tr><th>Subject</th><th>In</th>${cols.map(e=>`<th><button class="lnk cmh ${e.t}" data-exam="${e.id}">${EXS[e.id]}</button></th>`).join("")}</tr></thead><tbody>${rows.map(m=>{const pc=modPct(m),p=Math.round(pc.done*100/pc.total);
+  return `<tr data-cmrow="${m}" class="${cm.sel===m?"cur":""}"><td><button class="lnk cms" data-cmsel="${m}"><span class="sd ${isTech(m)?"tech":"non"}">${isTech(m)?"Tech":"Non-tech"}</span> ${esc(MODS[m].n)}</button><div class="small muted">${pc.total} topics · ${p}% done</div></td><td class="num"><b>${examsOf(m).length}</b></td>${cols.map(e=>{const c=(EXW[e.id]||{})[m];return `<td class="cmv ${c?(c[1]?"est":"on"):""}">${c?esc(c[0]):""}</td>`;}).join("")}</tr>`;}).join("")}</tbody></table>`:`<div class="empty" style="margin:0 16px 16px">No subject matches these filters. Try "In any of them" or clear a filter.</div>`;
+ const det=document.getElementById("cmdetail");if(cm.sel){det.hidden=false;det.innerHTML=cmDetailHtml(cm.sel);}else{det.hidden=true;det.innerHTML="";}
 }
-
 /* ---------------- APP VERSION: bump <meta name="app-version"> (date.build) AND add an UPDATES entry on every update ---------------- */
 const UPDATES=[
  {v:"2026-10-24.1",n:"First build",i:["11 exams with full syllabus checklists","Countdowns, study-hours chart, mock scores","Daily journal"]},
@@ -741,7 +786,8 @@ const UPDATES=[
  {v:"2026-10-25.9",n:"Common subjects",i:["New Common tab: subject × exam weightage","Top shared subjects, filters","\"In N of 11 exams\" tag"]},
  {v:"2026-10-25.10",n:"Update log",i:["Every update logged"]},
  {v:"2026-10-25.11",n:"Version pill",i:["Version number next to the title, like Victus Journal"]},
- {v:"2026-10-25.12",n:"What's new on tap",i:["Tap the version number to see this list","Nothing extra on the dashboard"]}
+ {v:"2026-10-25.12",n:"What's new on tap",i:["Tap the version number to see this list","Nothing extra on the dashboard"]},
+ {v:"2026-10-25.13",n:"Common: free filters",i:["Pick Technical / Non-tech, any exams (any or all), 3+/5+/7+ shared, and your own subjects","Tap a subject to see its value: exams, weightage in each, commonness %"]}
 ];
 const appVer=()=>(document.querySelector('meta[name="app-version"]')||{}).content||"";
 const short=v=>"v"+v.slice(5);
@@ -897,7 +943,12 @@ document.addEventListener("click",ev=>{
  else if(b.dataset.rev){const [m,id]=b.dataset.rev.split("|");markRevised(m,id);}
  else if(b.dataset.track){curTrack=b.dataset.track;renderGuide();}
  else if(b.id==="appVerPill"){showUpdates();}
- else if(b.dataset.cmf){cmFilter=b.dataset.cmf;renderCommon();}
+ else if(b.dataset.cmt){cm.type=b.dataset.cmt;renderCommon();}
+ else if(b.dataset.cmx){cm.exams.has(b.dataset.cmx)?cm.exams.delete(b.dataset.cmx):cm.exams.add(b.dataset.cmx);renderCommon();}
+ else if(b.dataset.cmm){cm.match=b.dataset.cmm;renderCommon();}
+ else if(b.dataset.cmn!==undefined){cm.min=+b.dataset.cmn;renderCommon();}
+ else if(b.dataset.cmclr){cm.type="all";cm.exams.clear();cm.match="any";cm.min=0;cm.subs.clear();renderCommon();}
+ else if(b.dataset.cmsel!==undefined){cm.sel=b.dataset.cmsel||null;renderCommon();if(cm.sel)document.getElementById("cmdetail").scrollIntoView({behavior:"smooth",block:"nearest"});}
  else if(b.dataset.open){const m=b.dataset.open;const ex=EXAMS.find(e=>e.id===curExam&&examMods(e).includes(m))||EXAMS.find(e=>examMods(e).includes(m));curExam=ex.id;curSrc="";openMods.add(m);renderSyllabus();showTab("syllabus");}
  else if(b.dataset.del){if(b.dataset.confirm){pendingDel=null;delEntry(b.dataset.del);}else{pendingDel=b.dataset.del;renderLedger();setTimeout(()=>{if(pendingDel===b.dataset.del){pendingDel=null;renderLedger();}},4000);}}
 });
@@ -926,6 +977,8 @@ document.getElementById("jform").addEventListener("submit",async ev=>{
 /* ---------------- BOOT ---------------- */
 document.getElementById("jDate").value=iso(today());
 fillSelects();syncMock();
+document.addEventListener("click",ev=>{const d=document.querySelector(".cmpick[open]");if(d&&(!d.contains(ev.target)||ev.target.closest("[data-cmdone]")))d.open=false;});
+document.addEventListener("change",ev=>{const c=ev.target;if(c.dataset&&c.dataset.cms){c.checked?cm.subs.add(c.dataset.cms):cm.subs.delete(c.dataset.cms);renderCommon();}});
 document.addEventListener("toggle",ev=>{const d=ev.target;if(d.dataset&&d.dataset.det){d.open?openNotes.add(d.dataset.det):openNotes.delete(d.dataset.det);}},true);
 renderVer();
 const h=(location.hash||"").slice(1);if(["overview","guide","syllabus","common","journal","exams"].includes(h))showTab(h);
