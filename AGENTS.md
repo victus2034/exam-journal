@@ -6,7 +6,7 @@
 - Keep `config.js` as it is (Firebase settings).
 
 ## Before saying it's done
-Run two different checks (data audit + click-through tests) and say what both were.
+Run two different checks (data audit + click-through tests) and say what both were. The click-through test is `node tests/smoke.js` (run it twice); add a case to it for every bug you fix.
 
 ## Summaries
 Short bullets: what changed, what was checked, what's next.

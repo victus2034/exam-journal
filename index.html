@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <title>Shiva's Exam Journal</title>
-<meta name="app-version" content="2026-10-26.15">
+<meta name="app-version" content="2026-11-01.16">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2c4bd1">
@@ -380,7 +380,7 @@ textarea{min-height:62px;resize:vertical}
    <h2>Log a session</h2>
    <form class="jf" id="jform">
     <div class="fgrid">
-     <div class="f"><label for="jDate">Date</label><input type="date" id="jDate" required></div>
+     <div class="f"><label for="jDate">Date</label><input type="date" id="jDate" min="2000-01-01" required></div>
      <div class="f"><label for="jHours">Hours studied</label><input type="number" id="jHours" min="0" max="18" step="0.25" placeholder="3.5" required></div>
      <div class="f"><label for="jType">Type</label><select id="jType"><option>Study</option><option>Revision</option><option value="PYQ">PYQ practice</option><option>Mock</option></select></div>
      <div class="f"><label for="jExam">Exam</label><select id="jExam"></select></div>
@@ -556,7 +556,17 @@ let db=null, mode="loading";
 const LKEY="shiva-exam-journal-v1";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function saveLocal(){if(mode!=="local")return;try{localStorage.setItem(LKEY,JSON.stringify(state));}catch(e){}}
-function loadLocal(){try{const s=JSON.parse(localStorage.getItem(LKEY)||"null");if(s){state.exams=s.exams||{};state.progress=s.progress||{};state.journal=s.journal||[];state.dates=s.dates||{};state.revs=s.revs||{};state.plan={techStart:"",nonStart:"",pyq:{},cur:{},...(s.plan||{})};}}catch(e){}}
+const obj=v=>v&&typeof v==="object"&&!Array.isArray(v)?v:{};
+let idSeq=0;const newId=()=>"l"+Date.now().toString(36)+(idSeq++).toString(36)+Math.random().toString(36).slice(2,6);
+// Clean data from storage or a backup file so one bad field cannot break the app (e.g. journal not a list, plan.pyq null, entries with no id).
+function normalize(s){s=obj(s);const per=o=>Object.fromEntries(Object.entries(obj(o)).filter(([k,v])=>MODS[k]&&obj(v)===v));const seen=new Set();
+ const journal=(Array.isArray(s.journal)?s.journal:[]).filter(j=>obj(j)===j).map(j=>{let id=typeof j.id==="string"&&j.id?j.id:"";if(!id||seen.has(id))id=newId();seen.add(id);return{...j,id};});
+ const pl=obj(s.plan);
+ return{exams:Object.fromEntries(Object.entries(obj(s.exams)).filter(([k,v])=>EXBY[k]&&obj(v)===v)),progress:per(s.progress),dates:per(s.dates),revs:per(s.revs),journal,
+  plan:{...pl,techStart:validDate(pl.techStart)?pl.techStart:"",nonStart:validDate(pl.nonStart)?pl.nonStart:"",pyq:obj(pl.pyq),cur:obj(pl.cur)}};}
+function useData(s){Object.assign(state,normalize(s));}
+function validDate(v){if(typeof v!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;const y=+v.slice(0,4),d=parse(v);return y>=2000&&y<=2100&&iso(d)===v;}
+function loadLocal(){try{const s=JSON.parse(localStorage.getItem(LKEY)||"null");if(s)useData(s);}catch(e){}}
 const ptimers={};
 function applyTopic(mod,id,v){
  const m=state.progress[mod]||(state.progress[mod]={}),d=state.dates[mod]||(state.dates[mod]={}),r=state.revs[mod]||(state.revs[mod]={});
@@ -573,14 +583,16 @@ function saveMod(mod){
 }
 function setTopic(mod,id,v){applyTopic(mod,id,v);saveMod(mod);}
 function setExam(id,patch){
+ if("date" in patch&&patch.date&&!validDate(patch.date)){alert("That date doesn't look right. Pick a real date between 2000 and 2100.");exTableFocus=false;renderExTable();return;}
  const cur={...examInfo(id),...patch};
  const rec={date:cur.date||"",confirmed:!!cur.confirmed,status:cur.status||"prep",notes:cur.notes||""};
  state.exams[id]=rec;renderAll();
  if(mode==="db")db.doc("exams/"+id).set(rec).catch(err);else saveLocal();
 }
 async function addEntry(e){
- if(mode==="db"){await db.collection("journal").add(e);}
- else{state.journal.push({id:"l"+Date.now(),...e});saveLocal();renderAll();}
+ // Sync mode: write to the local cache and return at once. Awaiting the server hung forever offline, so the form never cleared and taps made duplicates.
+ if(mode==="db"){db.collection("journal").doc().set(e).catch(err);}
+ else{state.journal.push({id:newId(),...e});saveLocal();renderAll();}
 }
 function delEntry(id){
  if(mode==="db")db.doc("journal/"+id).delete().catch(err);
@@ -607,7 +619,7 @@ function showTab(t){curTab=t;document.querySelectorAll("nav.tabs button").forEac
 function renderStats(){
  const t=today();const wk=new Date(t);wk.setDate(t.getDate()-6);
  const J=state.journal;let week=0,total=0;const days=new Set();
- J.forEach(j=>{const h=+j.hours||0;total+=h;if(j.date&&parse(j.date)>=wk)week+=h;if(h>0&&j.date)days.add(j.date);});
+ J.forEach(j=>{const h=+j.hours||0;total+=h;if(j.date&&parse(j.date)>=wk&&parse(j.date)<=t)week+=h;if(h>0&&j.date)days.add(j.date);});
  let streak=0;const c=new Date(t);if(!days.has(iso(c)))c.setDate(c.getDate()-1);while(days.has(iso(c))){streak++;c.setDate(c.getDate()-1);}
  let ad=0,at=0;const all=new Set();EXAMS.forEach(e=>examMods(e).forEach(m=>all.add(m)));all.forEach(m=>{const p=modPct(m);ad+=p.done;at+=p.total;});
  const next=EXAMS.map(e=>({e,d:daysTo(examInfo(e.id).date)})).filter(x=>x.d!==null&&x.d>=0&&examInfo(x.e.id).status!=="dropped").sort((a,b)=>a.d-b.d)[0];
@@ -825,7 +837,8 @@ const UPDATES=[
  {v:"2026-10-25.12",n:"What's new on tap",i:["Tap the version number to see this list","Nothing extra on the dashboard"]},
  {v:"2026-10-25.13",n:"Common: free filters",i:["Pick Technical / Non-tech, any exams (any or all), 3+/5+/7+ shared, and your own subjects","Tap a subject to see its value: exams, weightage in each, commonness %"]},
  {v:"2026-10-25.14",n:"Topic demand + exam fixes",i:["Every topic shows High / Medium / Low demand and which exams ask it","Syllabus: filter topics by demand","Subject value card lists its high-demand topics","Fixed: FCI JE English + 2 phases, MPESB current affairs, NTPC computers, MPPSC AE ICT, SBI mains split"]},
- {v:"2026-10-26.15",n:"Drive material links",i:["Each civil topic has a 📁 Notes link to its chapter folder in your Drive","Each subject: open its folder + 📄 short notes PDF","📁 All material link in Syllabus"]}
+ {v:"2026-10-26.15",n:"Drive material links",i:["Each civil topic has a 📁 Notes link to its chapter folder in your Drive","Each subject: open its folder + 📄 short notes PDF","📁 All material link in Syllabus"]},
+ {v:"2026-11-01.16",n:"Audit fixes",i:["Journal: no future dates, max 24h a day, mock score must fit its total","Saving offline while signed in no longer hangs; restore replaces old data and never breaks the app","Restored entries can be deleted; bad exam dates are refused"]}
 ];
 const appVer=()=>(document.querySelector('meta[name="app-version"]')||{}).content||"";
 const short=v=>"v"+v.slice(5);
@@ -995,8 +1008,8 @@ document.getElementById("extable").addEventListener("focusin",()=>exTableFocus=t
 document.getElementById("extable").addEventListener("focusout",()=>{exTableFocus=false;});
 document.getElementById("extable").addEventListener("change",ev=>{const el=ev.target;if(!el.dataset.ed)return;const v=el.type==="checkbox"?el.checked:el.value;setExam(el.dataset.ed,{[el.dataset.f]:v});});
 document.getElementById("v-guide").addEventListener("change",ev=>{const el=ev.target;
- if(el.id==="gStart"){el.blur();setPlan({[curTrack+"Start"]:el.value});}
- else if(el.dataset.pyq){const pq={...state.plan.pyq,[el.dataset.pyq]:Math.max(0,+el.value||0)};el.blur();setPlan({pyq:pq});}});
+ if(el.id==="gStart"){el.blur();if(el.value&&!validDate(el.value)){alert("That start date doesn't look right. Pick a real date between 2000 and 2100.");renderGuide();return;}setPlan({[curTrack+"Start"]:el.value});}
+ else if(el.dataset.pyq){const pq={...state.plan.pyq,[el.dataset.pyq]:Math.min(100000,Math.max(0,Math.round(+el.value||0)))};el.blur();setPlan({pyq:pq});}});
 document.addEventListener("change",ev=>{const el=ev.target;if(el.dataset&&el.dataset.cur){el.blur();setCur(el.dataset.cur,el.value);}});
 document.getElementById("jExam").addEventListener("change",fillModules);
 document.getElementById("fExam").addEventListener("change",renderLedger);
@@ -1009,12 +1022,27 @@ document.getElementById("jform").addEventListener("submit",async ev=>{
  const e={date:g("jDate"),hours:+g("jHours")||0,type:g("jType"),exam:g("jExam"),module:g("jModule"),topics:g("jTopics"),conf:+g("jConf")||3,well:g("jWell"),miss:g("jMiss"),next:g("jNext"),createdAt:Date.now()};
  if(e.type==="Mock"){e.score=g("jScore");e.total=g("jTotal");e.mockName=g("jMockName");}
  const toast=document.getElementById("jtoast");
+ const bad=entryProblem(e);if(bad){toast.style.color="var(--bad)";toast.textContent=bad;return;}
  try{await addEntry(e);["jTopics","jScore","jTotal","jMockName","jWell","jMiss","jNext","jHours"].forEach(id=>document.getElementById(id).value="");toast.style.color="var(--ok)";toast.textContent="Saved";setTimeout(()=>toast.textContent="",2500);}
  catch(x){toast.style.color="var(--bad)";toast.textContent="Not saved ("+(x&&x.code||"error")+"). Check your connection and try again.";}
 });
 
+// Catch typing mistakes before they skew stats, the chart and mock trends.
+function entryProblem(e){
+ if(!validDate(e.date))return "Pick a real date.";
+ if(e.date>iso(today()))return "That date is in the future. Log sessions on the day you studied.";
+ if(!(e.hours>=0&&e.hours<=18))return "Hours must be between 0 and 18.";
+ const day=state.journal.filter(j=>j.date===e.date).reduce((a,j)=>a+(+j.hours||0),0);
+ if(day+e.hours>24)return `That day already has ${+day.toFixed(2)}h logged. A day can't go over 24h.`;
+ if(e.type==="Mock"){const sc=+e.score,tt=+e.total;
+  if(e.total===""||!(tt>0))return "Mock: enter the total marks (more than 0).";
+  if(e.score===""||!isFinite(sc))return "Mock: enter your score.";
+  if(sc>tt)return "Mock: score can't be more than the total.";
+  if(sc<-tt)return "Mock: score is too low for that total.";}
+ return "";
+}
 /* ---------------- BOOT ---------------- */
-document.getElementById("jDate").value=iso(today());
+document.getElementById("jDate").value=iso(today());document.getElementById("jDate").max=iso(today());
 fillSelects();syncMock();
 document.addEventListener("click",ev=>{const d=document.querySelector(".cmpick[open]");if(d&&(!d.contains(ev.target)||ev.target.closest("[data-cmdone]")))d.open=false;});
 document.addEventListener("change",ev=>{const c=ev.target;if(c.dataset&&c.dataset.cms){c.checked?cm.subs.add(c.dataset.cms):cm.subs.delete(c.dataset.cms);renderCommon();}});
@@ -1027,18 +1055,22 @@ const m=document.getElementById("mode"),authBtn=document.getElementById("authBtn
 let unsubs=[];
 function scoped(fs,uid){const base="users/"+uid+"/";return{doc:p=>fs.doc(base+p),collection:c=>fs.collection(base+c)};}
 function hasLocalData(){return state.journal.some(j=>!j.example)||Object.values(state.progress).some(o=>Object.keys(o||{}).length)||Object.keys(state.exams).length||!!state.plan.techStart;}
-async function pushLocalToCloud(){
+// replace = {journal,progress,exams} ids already in the cloud; any not in the local data are deleted (restore replaces, not merges).
+function pushLocalToCloud(replace){
  const b=fbDb.batch();const sc=scoped(fbDb,fbUser.uid);
- Object.keys(MODS).forEach(k=>{if(state.progress[k]&&Object.keys(state.progress[k]).length)b.set(sc.doc("progress/"+k),{s:state.progress[k],d:state.dates[k]||{},r:state.revs[k]||{}});});
+ Object.keys(MODS).forEach(k=>{if(state.progress[k]&&Object.keys(state.progress[k]).length)b.set(sc.doc("progress/"+k),{s:state.progress[k],d:state.dates[k]||{},r:state.revs[k]||{}});else if(replace&&replace.progress.includes(k))b.delete(sc.doc("progress/"+k));});
  for(const k in state.exams)b.set(sc.doc("exams/"+k),state.exams[k]);
+ if(replace)replace.exams.filter(k=>!state.exams[k]).forEach(k=>b.delete(sc.doc("exams/"+k)));
  b.set(sc.doc("settings/plan"),JSON.parse(JSON.stringify(state.plan)));
- state.journal.filter(j=>!j.example).forEach(j=>{const {id,...x}=j;b.set(sc.doc("journal/"+(id||("l"+Date.now()))),x);});
- await b.commit();
+ const keep=state.journal.filter(j=>!j.example);keep.forEach(j=>{const {id,...x}=j;b.set(sc.doc("journal/"+(id||newId())),x);});
+ if(replace){const ids=new Set(keep.map(j=>j.id));replace.journal.filter(id=>!ids.has(id)).forEach(id=>b.delete(sc.doc("journal/"+id)));}
+ return b.commit();
 }
 function listen(){
  unsubs.forEach(u=>u());unsubs=[];
  unsubs.push(db.collection("exams").onSnapshot(s=>{const o={};s.docs.forEach(d=>o[d.id]=d.data());state.exams=o;renderAll();},err));
- unsubs.push(db.collection("progress").onSnapshot(s=>{s.docs.forEach(d=>{if(!ptimers[d.id]){const x=d.data()||{};state.progress[d.id]=x.s||{};state.dates[d.id]=x.d||{};state.revs[d.id]=x.r||{};}});renderAll();},err));
+ unsubs.push(db.collection("progress").onSnapshot(s=>{const P={},D={},R={};for(const k in ptimers){P[k]=state.progress[k]||{};D[k]=state.dates[k]||{};R[k]=state.revs[k]||{};}
+  s.docs.forEach(d=>{if(!ptimers[d.id]&&MODS[d.id]){const x=d.data()||{};P[d.id]=obj(x.s);D[d.id]=obj(x.d);R[d.id]=obj(x.r);}});state.progress=P;state.dates=D;state.revs=R;renderAll();},err));
  unsubs.push(db.collection("settings").onSnapshot(s=>{s.docs.forEach(d=>{if(d.id==="plan"){const x=d.data()||{};state.plan={techStart:"",nonStart:"",pyq:{},cur:{},...x,pyq:x.pyq||{},cur:x.cur||{}};}});renderAll();},err));
  unsubs.push(db.collection("journal").onSnapshot(s=>{state.journal=s.docs.map(d=>({id:d.id,...d.data()}));renderAll();},err));
 }
@@ -1061,7 +1093,7 @@ let fbDb=null,fbUser=null;
   loadLocal();const local=hasLocalData();
   db=scoped(fbDb,u.uid);mode="db";m.textContent="Synced · "+(u.email||"signed in");m.className="mode ok";
   try{const p=await db.collection("progress").get(),j=await db.collection("journal").get(),st=await db.collection("settings").get();
-   if(local&&p.empty&&j.empty&&st.empty){await pushLocalToCloud();}}catch(e){}
+   if(local&&p.empty&&j.empty&&st.empty){pushLocalToCloud().catch(err);}}catch(e){}
   listen();
  });
 })();
@@ -1075,8 +1107,9 @@ document.getElementById("bkBtn").onclick=()=>{
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:"application/json"}));a.download="exam-journal-backup-"+iso(today())+".json";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);};
  d.querySelector("#bkIn").onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{const x=JSON.parse(await f.text());if(x.app!=="shiva-exam-journal")throw new Error("Not an exam journal backup");
   if(!confirm("Replace the data here with this backup from "+(x.at||"").slice(0,10)+"?"))return;
-  state.exams=x.exams||{};state.progress=x.progress||{};state.dates=x.dates||{};state.revs=x.revs||{};state.journal=x.journal||[];state.plan={techStart:"",nonStart:"",pyq:{},cur:{},...(x.plan||{})};
-  if(mode==="db"&&fbDb&&fbUser){await pushLocalToCloud();}else{saveLocal();}renderAll();close();alert("Backup restored.");}catch(e){alert("Could not restore: "+e.message);}};
+  const was={journal:state.journal.map(j=>j.id),progress:Object.keys(state.progress),exams:Object.keys(state.exams)};
+  useData(x);
+  if(mode==="db"&&fbDb&&fbUser){pushLocalToCloud(was).catch(err);}else{saveLocal();}renderAll();close();alert("Backup restored.");}catch(e){alert("Could not restore: "+e.message);}};
 };
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>

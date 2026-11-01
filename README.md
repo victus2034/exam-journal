@@ -37,3 +37,9 @@ This is your own copy of the journal. It runs on GitHub Pages (free) and syncs w
 4. It works offline too. Changes sync when you're back online.
 
 **Tip:** anything you ticked before signing in is uploaded the first time you sign in.
+
+---
+
+## Checks (for whoever edits the app)
+
+`node tests/smoke.js` opens the app in a headless browser and clicks through every tab, then tries bad input on purpose: future dates, negative or 500 hours, more than 24h in a day, mock scores over the total, broken backup files, a save while offline. It needs Playwright with Chromium. Run it twice before calling a change done.
