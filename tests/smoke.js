@@ -64,6 +64,26 @@ const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+Stri
  // bad data already in storage must not break boot
  await p.evaluate(()=>localStorage.setItem('shiva-exam-journal-v1',JSON.stringify({journal:'oops',plan:{pyq:null},progress:'x'})));await p.reload();await p.waitForTimeout(300);
  for(const t of ['overview','guide','journal','syllabus'])await p.click(`[data-tab=${t}]`);
+ // odd values in storage / backups (numbers for dates, conf 9, html in counts) must not crash or inject
+ for(const [name,data] of [['conf 9',{journal:[{date:'2026-11-01',hours:2,type:'Study',conf:9}]}],['date as number',{journal:[{date:20261101,hours:'x',type:5}]}],
+   ['exam date as number',{exams:{sscje:{date:123,status:'zzz'}}}],['html in PYQ count',{plan:{pyq:{sm:'"><b id=pwn>x</b>'},cur:{tech:'nope'}}}],['bad progress',{progress:{rcc:{a:'9',b:-3}},dates:{rcc:{a:7}}}]]){
+  const before=errs.length;await p.evaluate(d=>localStorage.setItem('shiva-exam-journal-v1',JSON.stringify(d)),data);await p.reload();await p.waitForTimeout(250);
+  for(const t of ['overview','guide','journal','syllabus','exams','common'])await p.click(`[data-tab=${t}]`);await p.click('[data-tab=guide]');
+  ok(errs.length===before&&!(await p.$('#pwn')),'survives '+name);}
+ await p.evaluate(()=>localStorage.clear());await p.reload();await p.waitForTimeout(250);
+ // RRB-style -1/3 marking score
+ await p.click('[data-tab=journal]');await p.selectOption('#jType','Mock');await p.fill('#jScore','61.67');ok(await p.$eval('#jScore',e=>e.checkValidity()),'mock score 61.67 accepted');
+ // Reset asks first (dismiss keeps progress)
+ await p.click('[data-tab=syllabus]');if(await p.getAttribute('[data-mod=rcc]','aria-expanded')!=='true')await p.click('[data-mod=rcc]');await p.click('[data-all=rcc][data-v="2"]');
+ p.removeAllListeners('dialog');p.once('dialog',d=>{dialogs.push(d.message());d.dismiss();});await p.click('[data-all=rcc][data-v="0"]');
+ ok(dialogs.some(d=>/Reset every topic/.test(d))&&(await p.textContent('[data-mod=rcc]')).includes('17/17'),'reset asks and cancel keeps progress');
+ p.on('dialog',d=>{dialogs.push(d.message());d.accept();});await p.click('[data-all=rcc][data-v="0"]');ok((await p.textContent('[data-mod=rcc]')).includes('0/17'),'reset after OK');
+ // app left open past midnight: journal date + max roll over
+ await p.evaluate(()=>{const y=new Date();y.setDate(y.getDate()-1);shownDay=iso(y);const jd=document.getElementById('jDate');jd.value=shownDay;jd.max=shownDay;dayCheck();});
+ ok((await p.inputValue('#jDate'))===today&&(await p.getAttribute('#jDate','max'))===today,'new day rolls journal date');
+ // sync mode: a tick waiting in the batch is sent when the app is hidden/closed
+ await p.evaluate(()=>{window.__s=[];mode='db';db={doc:k=>({set:x=>{__s.push(k);return Promise.resolve();}})};setTopic('sm',MODS.sm.ids[0],1);flushProgress();});
+ ok((await p.evaluate(()=>__s))[0]==='progress/sm','pending tick flushed on close');await p.evaluate(()=>{mode='local';db=null;});
  ok(errs.length===0,'no page errors'+(errs.length?': '+errs.join(' | '):''));
  // version + changelog in step
  const v=await p.getAttribute('meta[name=app-version]','content');ok(await p.evaluate(v=>UPDATES[UPDATES.length-1].v===v,v),'UPDATES has an entry for '+v);
