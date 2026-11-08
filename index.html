@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <title>Shiva's Exam Journal</title>
-<meta name="app-version" content="2026-11-01.16">
+<meta name="app-version" content="2026-11-08.17">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2c4bd1">
@@ -386,7 +386,7 @@ textarea{min-height:62px;resize:vertical}
      <div class="f"><label for="jExam">Exam</label><select id="jExam"></select></div>
      <div class="f w2"><label for="jModule">Subject</label><select id="jModule"></select></div>
      <div class="f w2"><label for="jTopics">Topics covered</label><input id="jTopics" placeholder="e.g. Moment distribution, Kani's method"></div>
-     <div class="f mockf"><label for="jScore">Mock score</label><input type="number" id="jScore" step="0.25" placeholder="142.5"></div>
+     <div class="f mockf"><label for="jScore">Mock score</label><input type="number" id="jScore" step="any" placeholder="142.5"></div>
      <div class="f mockf"><label for="jTotal">Out of</label><input type="number" id="jTotal" step="1" placeholder="200"></div>
      <div class="f mockf w2"><label for="jMockName">Mock name / source</label><input id="jMockName" placeholder="e.g. Testbook full mock 7"></div>
      <div class="f"><label for="jConf">Confidence</label><select id="jConf"><option value="1">1 · Shaky</option><option value="2">2</option><option value="3" selected>3 · Okay</option><option value="4">4</option><option value="5">5 · Strong</option></select></div>
@@ -559,11 +559,18 @@ function saveLocal(){if(mode!=="local")return;try{localStorage.setItem(LKEY,JSON
 const obj=v=>v&&typeof v==="object"&&!Array.isArray(v)?v:{};
 let idSeq=0;const newId=()=>"l"+Date.now().toString(36)+(idSeq++).toString(36)+Math.random().toString(36).slice(2,6);
 // Clean data from storage or a backup file so one bad field cannot break the app (e.g. journal not a list, plan.pyq null, entries with no id).
-function normalize(s){s=obj(s);const per=o=>Object.fromEntries(Object.entries(obj(o)).filter(([k,v])=>MODS[k]&&obj(v)===v));const seen=new Set();
- const journal=(Array.isArray(s.journal)?s.journal:[]).filter(j=>obj(j)===j).map(j=>{let id=typeof j.id==="string"&&j.id?j.id:"";if(!id||seen.has(id))id=newId();seen.add(id);return{...j,id};});
- const pl=obj(s.plan);
- return{exams:Object.fromEntries(Object.entries(obj(s.exams)).filter(([k,v])=>EXBY[k]&&obj(v)===v)),progress:per(s.progress),dates:per(s.dates),revs:per(s.revs),journal,
-  plan:{...pl,techStart:validDate(pl.techStart)?pl.techStart:"",nonStart:validDate(pl.nonStart)?pl.nonStart:"",pyq:obj(pl.pyq),cur:obj(pl.cur)}};}
+const TYPES=["Study","Revision","PYQ","Mock"],str=v=>v==null?"":String(v).slice(0,5000),num=(v,lo,hi)=>{const n=+v;return isFinite(n)?Math.min(hi,Math.max(lo,n)):lo;};
+// One entry / exam record / topic map, cleaned so odd values (numbers for dates, conf 9, text in counts) can't crash a render.
+function cleanEntry(j){const e={...j};e.date=validDate(j.date)?j.date:"";e.hours=num(j.hours,0,24);e.conf=Math.round(num(j.conf||3,1,5));e.type=TYPES.includes(j.type)?j.type:"Study";
+ e.exam=EXBY[j.exam]?j.exam:"";e.module=MODS[j.module]?j.module:"";["topics","well","miss","next","mockName","score","total"].forEach(k=>{if(k in j)e[k]=str(j[k]);});return e;}
+function cleanExam(x){x=obj(x);return{date:validDate(x.date)?x.date:"",confirmed:!!x.confirmed,status:STATUS.some(s=>s[0]===x.status)?x.status:"prep",notes:str(x.notes)};}
+const cleanMap=(o,lo,hi)=>Object.fromEntries(Object.entries(obj(o)).map(([k,v])=>[k,Math.round(num(v,lo,hi))]).filter(([,v])=>v));
+const cleanDates=o=>Object.fromEntries(Object.entries(obj(o)).filter(([,v])=>validDate(v)));
+const cleanPlan=pl=>{pl=obj(pl);const cur=Object.fromEntries(Object.entries(obj(pl.cur)).filter(([k,v])=>TRACKS[k]&&(v===""||MODS[v])));
+ return{...pl,techStart:validDate(pl.techStart)?pl.techStart:"",nonStart:validDate(pl.nonStart)?pl.nonStart:"",pyq:Object.fromEntries(Object.entries(obj(pl.pyq)).filter(([k])=>MODS[k]).map(([k,v])=>[k,Math.round(num(v,0,100000))])),cur};};
+function normalize(s){s=obj(s);const per=(o,f)=>Object.fromEntries(Object.entries(obj(o)).filter(([k,v])=>MODS[k]&&obj(v)===v).map(([k,v])=>[k,f(v)]));const seen=new Set();
+ const journal=(Array.isArray(s.journal)?s.journal:[]).filter(j=>obj(j)===j).map(j=>{let id=typeof j.id==="string"&&j.id?j.id:"";if(!id||seen.has(id))id=newId();seen.add(id);return{...cleanEntry(j),id};});
+ return{exams:Object.fromEntries(Object.entries(obj(s.exams)).filter(([k])=>EXBY[k]).map(([k,v])=>[k,cleanExam(v)])),progress:per(s.progress,v=>cleanMap(v,0,3)),dates:per(s.dates,cleanDates),revs:per(s.revs,v=>cleanMap(v,0,3)),journal,plan:cleanPlan(s.plan)};}
 function useData(s){Object.assign(state,normalize(s));}
 function validDate(v){if(typeof v!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;const y=+v.slice(0,4),d=parse(v);return y>=2000&&y<=2100&&iso(d)===v;}
 function loadLocal(){try{const s=JSON.parse(localStorage.getItem(LKEY)||"null");if(s)useData(s);}catch(e){}}
@@ -838,7 +845,8 @@ const UPDATES=[
  {v:"2026-10-25.13",n:"Common: free filters",i:["Pick Technical / Non-tech, any exams (any or all), 3+/5+/7+ shared, and your own subjects","Tap a subject to see its value: exams, weightage in each, commonness %"]},
  {v:"2026-10-25.14",n:"Topic demand + exam fixes",i:["Every topic shows High / Medium / Low demand and which exams ask it","Syllabus: filter topics by demand","Subject value card lists its high-demand topics","Fixed: FCI JE English + 2 phases, MPESB current affairs, NTPC computers, MPPSC AE ICT, SBI mains split"]},
  {v:"2026-10-26.15",n:"Drive material links",i:["Each civil topic has a 📁 Notes link to its chapter folder in your Drive","Each subject: open its folder + 📄 short notes PDF","📁 All material link in Syllabus"]},
- {v:"2026-11-01.16",n:"Audit fixes",i:["Journal: no future dates, max 24h a day, mock score must fit its total","Saving offline while signed in no longer hangs; restore replaces old data and never breaks the app","Restored entries can be deleted; bad exam dates are refused"]}
+ {v:"2026-11-01.16",n:"Audit fixes",i:["Journal: no future dates, max 24h a day, mock score must fit its total","Saving offline while signed in no longer hangs; restore replaces old data and never breaks the app","Restored entries can be deleted; bad exam dates are refused"]},
+ {v:"2026-11-08.17",n:"Audit fixes 2",i:["Mock scores like 61.67 (−1/3 marking) can be saved","Reset asks first; a tick right before closing the app is kept","Left open overnight, the journal date and countdowns move to the new day; odd backup values can't break any tab"]}
 ];
 const appVer=()=>(document.querySelector('meta[name="app-version"]')||{}).content||"";
 const short=v=>"v"+v.slice(5);
@@ -942,7 +950,7 @@ function renderGuide(){
    <div style="display:grid;gap:4px"><div class="row small"><span class="muted">Topics ${p.done}/${p.total}</span><span class="num">${pct}%</span></div><div class="bar"><i style="width:${pct}%"></i></div></div>
    <div class="small muted">Plan: ${fmtDate(pd.from)} → ${fmtDate(pd.to)} · ${esc(g.grp)}</div>
    <details class="gdet" data-det="${m}" ${openNotes.has(m)?"open":""}><summary>Study notes: why here, focus, traps, PYQ tip</summary><dl class="gnotes"><dt>Weightage</dt><dd>${esc(g.wtx)}</dd><dt>Why here</dt><dd>${esc(g.why)}</dd><dt>Focus</dt><dd>${esc(g.focus)}</dd><dt>Common traps</dt><dd>${esc(g.trap)}</dd><dt>PYQ tip</dt><dd>${esc(g.pyq)}</dd></dl></details>
-   <div class="pyq"><label for="pyq-${m}" class="small muted">PYQs solved</label><input type="number" min="0" id="pyq-${m}" data-pyq="${m}" value="${y}"><span class="small muted">/ ${g.tgt}</span><div class="bar" style="flex:1;min-width:60px"><i style="width:${Math.min(100,Math.round(y*100/g.tgt))}%;background:var(--non)"></i></div></div>
+   <div class="pyq"><label for="pyq-${m}" class="small muted">PYQs solved</label><input type="number" min="0" id="pyq-${m}" data-pyq="${m}" value="${esc(y)}"><span class="small muted">/ ${g.tgt}</span><div class="bar" style="flex:1;min-width:60px"><i style="width:${Math.min(100,Math.round(y*100/g.tgt))}%;background:var(--non)"></i></div></div>
    <button class="lnk" data-open="${m}" style="justify-self:start">Open topics →</button></div>`;}).join("")}</div></div>`).join("");
 }
 function setPlan(patch){
@@ -989,7 +997,7 @@ document.addEventListener("click",ev=>{
  else if(b.dataset.sel){curExam=b.dataset.sel;renderSyllabus();}
  else if(b.dataset.mod){const m=b.dataset.mod;openMods.has(m)?openMods.delete(m):openMods.add(m);renderSyllabus();}
  else if(b.dataset.m){const m=b.dataset.m,id=MODS[m].ids[+b.dataset.k];const v=((state.progress[m]||{})[id]||0);setTopic(m,id,(v+1)%4);}
- else if(b.dataset.all){const m=b.dataset.all,v=+b.dataset.v;MODS[m].ids.forEach(i=>{const c=(state.progress[m]||{})[i]||0;applyTopic(m,i,v?Math.max(v,c):0);});saveMod(m);}
+ else if(b.dataset.all){const m=b.dataset.all,v=+b.dataset.v;if(!v&&Object.keys(state.progress[m]||{}).length&&!confirm("Reset every topic in "+MODS[m].n+" to Not started? This also clears its revision dates."))return;MODS[m].ids.forEach(i=>{const c=(state.progress[m]||{})[i]||0;applyTopic(m,i,v?Math.max(v,c):0);});saveMod(m);}
  else if(b.dataset.now){const [m,k,v]=b.dataset.now.split("|");setTopic(m,MODS[m].ids[+k],+v);}
  else if(b.dataset.pin){const [t,m]=b.dataset.pin.split("|");setCur(t,m);}
  else if(b.dataset.rev){const [m,id]=b.dataset.rev.split("|");markRevised(m,id);}
@@ -1042,6 +1050,15 @@ function entryProblem(e){
  return "";
 }
 /* ---------------- BOOT ---------------- */
+// The app often stays open for days (home-screen app): roll the journal date and countdowns over when the day changes.
+let shownDay=iso(today());
+function dayCheck(){const t=iso(today());const jd=document.getElementById("jDate");jd.max=t;if(t!==shownDay){if(jd.value===shownDay)jd.value=t;shownDay=t;renderAll();}}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")dayCheck();else flushProgress();});
+window.addEventListener("focus",dayCheck);setInterval(dayCheck,60000);
+document.getElementById("jDate").addEventListener("focus",dayCheck);
+// Send ticks waiting in the 0.7s batch now, so closing the app right after a tap doesn't lose it.
+function flushProgress(){if(mode!=="db")return;for(const k in ptimers){clearTimeout(ptimers[k]);db.doc("progress/"+k).set({s:{...(state.progress[k]||{})},d:{...(state.dates[k]||{})},r:{...(state.revs[k]||{})}}).catch(err);delete ptimers[k];}}
+window.addEventListener("pagehide",flushProgress);
 document.getElementById("jDate").value=iso(today());document.getElementById("jDate").max=iso(today());
 fillSelects();syncMock();
 document.addEventListener("click",ev=>{const d=document.querySelector(".cmpick[open]");if(d&&(!d.contains(ev.target)||ev.target.closest("[data-cmdone]")))d.open=false;});
@@ -1068,11 +1085,11 @@ function pushLocalToCloud(replace){
 }
 function listen(){
  unsubs.forEach(u=>u());unsubs=[];
- unsubs.push(db.collection("exams").onSnapshot(s=>{const o={};s.docs.forEach(d=>o[d.id]=d.data());state.exams=o;renderAll();},err));
+ unsubs.push(db.collection("exams").onSnapshot(s=>{const o={};s.docs.forEach(d=>{if(EXBY[d.id])o[d.id]=cleanExam(d.data());});state.exams=o;renderAll();},err));
  unsubs.push(db.collection("progress").onSnapshot(s=>{const P={},D={},R={};for(const k in ptimers){P[k]=state.progress[k]||{};D[k]=state.dates[k]||{};R[k]=state.revs[k]||{};}
-  s.docs.forEach(d=>{if(!ptimers[d.id]&&MODS[d.id]){const x=d.data()||{};P[d.id]=obj(x.s);D[d.id]=obj(x.d);R[d.id]=obj(x.r);}});state.progress=P;state.dates=D;state.revs=R;renderAll();},err));
- unsubs.push(db.collection("settings").onSnapshot(s=>{s.docs.forEach(d=>{if(d.id==="plan"){const x=d.data()||{};state.plan={techStart:"",nonStart:"",pyq:{},cur:{},...x,pyq:x.pyq||{},cur:x.cur||{}};}});renderAll();},err));
- unsubs.push(db.collection("journal").onSnapshot(s=>{state.journal=s.docs.map(d=>({id:d.id,...d.data()}));renderAll();},err));
+  s.docs.forEach(d=>{if(!ptimers[d.id]&&MODS[d.id]){const x=d.data()||{};P[d.id]=cleanMap(x.s,0,3);D[d.id]=cleanDates(x.d);R[d.id]=cleanMap(x.r,0,3);}});state.progress=P;state.dates=D;state.revs=R;renderAll();},err));
+ unsubs.push(db.collection("settings").onSnapshot(s=>{s.docs.forEach(d=>{if(d.id==="plan"){state.plan=cleanPlan(d.data());}});renderAll();},err));
+ unsubs.push(db.collection("journal").onSnapshot(s=>{state.journal=s.docs.map(d=>({...cleanEntry(d.data()||{}),id:d.id}));renderAll();},err));
 }
 function goLocal(msg){db=null;mode="local";loadLocal();m.textContent=msg;m.className="mode warn";renderAll();}
 let fbDb=null,fbUser=null;
