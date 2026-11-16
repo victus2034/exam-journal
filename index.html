@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <title>Shiva's Exam Journal</title>
-<meta name="app-version" content="2026-11-08.17">
+<meta name="app-version" content="2026-11-16.18">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2c4bd1">
@@ -381,7 +381,7 @@ textarea{min-height:62px;resize:vertical}
    <form class="jf" id="jform">
     <div class="fgrid">
      <div class="f"><label for="jDate">Date</label><input type="date" id="jDate" min="2000-01-01" required></div>
-     <div class="f"><label for="jHours">Hours studied</label><input type="number" id="jHours" min="0" max="18" step="0.25" placeholder="3.5" required></div>
+     <div class="f"><label for="jHours">Hours studied</label><input type="number" id="jHours" min="0" max="18" step="any" placeholder="3.5" required></div>
      <div class="f"><label for="jType">Type</label><select id="jType"><option>Study</option><option>Revision</option><option value="PYQ">PYQ practice</option><option>Mock</option></select></div>
      <div class="f"><label for="jExam">Exam</label><select id="jExam"></select></div>
      <div class="f w2"><label for="jModule">Subject</label><select id="jModule"></select></div>
@@ -488,6 +488,8 @@ const EXAMS=[
   def:{date:"",confirmed:false,label:"Grade B notification usually mid-year"},note:"Assistant has a language proficiency test in Hindi for MP."}
 ];
 const STATUS=[["prep","Preparing"],["applied","Form filled"],["admit","Admit card out"],["appeared","Appeared"],["selected","Selected"],["dropped","Skipping"]];
+// Exams you have already sat or are skipping never count as the "next" exam.
+const DONEST=["appeared","selected","dropped"];
 const TSTATE=["Not started","Learning","Done","Revised"];
 const EXBY=Object.fromEntries(EXAMS.map(e=>[e.id,e]));
 const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,48);
@@ -629,7 +631,7 @@ function renderStats(){
  J.forEach(j=>{const h=+j.hours||0;total+=h;if(j.date&&parse(j.date)>=wk&&parse(j.date)<=t)week+=h;if(h>0&&j.date)days.add(j.date);});
  let streak=0;const c=new Date(t);if(!days.has(iso(c)))c.setDate(c.getDate()-1);while(days.has(iso(c))){streak++;c.setDate(c.getDate()-1);}
  let ad=0,at=0;const all=new Set();EXAMS.forEach(e=>examMods(e).forEach(m=>all.add(m)));all.forEach(m=>{const p=modPct(m);ad+=p.done;at+=p.total;});
- const next=EXAMS.map(e=>({e,d:daysTo(examInfo(e.id).date)})).filter(x=>x.d!==null&&x.d>=0&&examInfo(x.e.id).status!=="dropped").sort((a,b)=>a.d-b.d)[0];
+ const next=EXAMS.map(e=>({e,d:daysTo(examInfo(e.id).date)})).filter(x=>x.d!==null&&x.d>=0&&!DONEST.includes(examInfo(x.e.id).status)).sort((a,b)=>a.d-b.d)[0];
  document.getElementById("stats").innerHTML=
  `<div class="stat"><span class="label">Next exam</span><span class="v">${next?next.d+"d":"—"}</span><span class="s">${next?esc(next.e.name):"No dates set"}</span></div>
   <div class="stat"><span class="label">This week</span><span class="v">${week.toFixed(1)}h</span><span class="s">${total.toFixed(1)}h logged in total</span></div>
@@ -645,7 +647,7 @@ function cdHtml(info){
  <span class="small muted">${fmtDate(info.date)} <span class="pill ${info.confirmed?"":"est"}">${info.confirmed?"Confirmed":"Estimate"}</span></span>`;
 }
 function renderCards(){
- const rank=e=>{const i=examInfo(e.id),d=daysTo(i.date);return i.status==="dropped"?3e5:d===null?2e5:d<0?1e5-d:d;};
+ const rank=e=>{const i=examInfo(e.id),d=daysTo(i.date);return i.status==="dropped"?3e5:DONEST.includes(i.status)?2.5e5:d===null?2e5:d<0?1e5-d:d;};
  document.getElementById("excards").innerHTML=[...EXAMS].sort((a,b)=>rank(a)-rank(b)).map(e=>{const i=examInfo(e.id);const p=examPct(e);const st=STATUS.find(s=>s[0]===i.status)||STATUS[0];
  return `<button class="excard" data-exam="${e.id}"><div class="exhead"><span class="exname">${esc(e.name)}</span><span class="kind ${e.t}">${e.t==="tech"?"Technical":"Non-tech"}</span></div>
  <div style="display:grid;gap:2px">${cdHtml(i)}</div>
@@ -660,7 +662,7 @@ function renderChart(){
  const y=v=>T+(H-T-B)*(1-v/mx);
  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Hours studied per day for the last 28 days">`;
  [0,mx/2,mx].forEach(v=>{s+=`<line x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${y(v)+3}" text-anchor="end">${+v.toFixed(1)}</text>`;});
- vals.forEach((v,i)=>{const x=L+2+i*bw;const h=(H-T-B)*(v/mx);if(v>0)s+=`<rect x="${x+1.5}" y="${y(v)}" width="${bw-3}" height="${h}" rx="2" fill="${i===27?"var(--accent)":"var(--non)"}"><title>${days[i]}: ${v}h</title></rect>`;
+ vals.forEach((v,i)=>{const x=L+2+i*bw;const h=(H-T-B)*(v/mx);if(v>0)s+=`<rect x="${x+1.5}" y="${y(v)}" width="${bw-3}" height="${h}" rx="2" fill="${i===27?"var(--accent)":"var(--non)"}"><title>${days[i]}: ${+v.toFixed(2)}h</title></rect>`;
   if(i%7===0||i===27){const d=parse(days[i]);s+=`<text x="${i===27?x+bw:x+bw/2}" y="${H-6}" text-anchor="${i===27?"end":"middle"}">${i===27?"Today":d.getDate()+"/"+(d.getMonth()+1)}</text>`;}});
  s+="</svg>";
  const sum=vals.reduce((a,b)=>a+b,0);
@@ -689,11 +691,11 @@ function entryHtml(j,full){
  ${notes.length&&full?`<div class="notes3">${notes.map(n=>`<div><span class="label">${n[0]}</span>${esc(n[1])}</div>`).join("")}</div>`:""}</div>`;
 }
 function renderRecent(){const J=sortedJournal().slice(0,3);document.getElementById("recent").innerHTML=J.length?J.map(j=>entryHtml(j,false)).join(""):`<div class="empty">Your study log is empty. Open the Journal and log today's session: hours, subject, topics, and what you got wrong.</div>`;}
-let pendingDel=null;
+let pendingDel=null;const LEDGER_PAGE=50;let ledgerN=LEDGER_PAGE;
 function renderLedger(){
  const fe=document.getElementById("fExam").value,ft=document.getElementById("fType").value;
- const J=sortedJournal().filter(j=>(!fe||j.exam===fe)&&(!ft||j.type===ft));
- document.getElementById("ledger").innerHTML=J.length?J.map(j=>{let h=entryHtml(j,true);if(pendingDel===j.id)h=h.replace(`data-del="${esc(j.id)}">Delete`,`data-del="${esc(j.id)}" data-confirm="1" style="color:var(--bad);font-weight:600">Tap again to delete`);return h;}).join(""):`<div class="empty">${state.journal.length?"No entries match these filters.":"No entries yet. Use the form above to log your first session."}</div>`;
+ const J0=sortedJournal().filter(j=>(!fe||j.exam===fe)&&(!ft||j.type===ft)),J=J0.slice(0,ledgerN);
+ document.getElementById("ledger").innerHTML=J.length?J.map(j=>{let h=entryHtml(j,true);if(pendingDel===j.id)h=h.replace(`data-del="${esc(j.id)}">Delete`,`data-del="${esc(j.id)}" data-confirm="1" style="color:var(--bad);font-weight:600">Tap again to delete`);return h;}).join("")+(J0.length>J.length?`<button class="btn ghost sm" data-more="1" style="justify-self:center">Show ${Math.min(LEDGER_PAGE,J0.length-J.length)} more (${J0.length-J.length} older)</button>`:""):`<div class="empty">${state.journal.length?"No entries match these filters.":"No entries yet. Use the form above to log your first session."}</div>`;
 }
 
 /* ---------------- EXAM OVERVIEW: difficulty + General cutoffs ---------------- */
@@ -846,7 +848,8 @@ const UPDATES=[
  {v:"2026-10-25.14",n:"Topic demand + exam fixes",i:["Every topic shows High / Medium / Low demand and which exams ask it","Syllabus: filter topics by demand","Subject value card lists its high-demand topics","Fixed: FCI JE English + 2 phases, MPESB current affairs, NTPC computers, MPPSC AE ICT, SBI mains split"]},
  {v:"2026-10-26.15",n:"Drive material links",i:["Each civil topic has a 📁 Notes link to its chapter folder in your Drive","Each subject: open its folder + 📄 short notes PDF","📁 All material link in Syllabus"]},
  {v:"2026-11-01.16",n:"Audit fixes",i:["Journal: no future dates, max 24h a day, mock score must fit its total","Saving offline while signed in no longer hangs; restore replaces old data and never breaks the app","Restored entries can be deleted; bad exam dates are refused"]},
- {v:"2026-11-08.17",n:"Audit fixes 2",i:["Mock scores like 61.67 (−1/3 marking) can be saved","Reset asks first; a tick right before closing the app is kept","Left open overnight, the journal date and countdowns move to the new day; odd backup values can't break any tab"]}
+ {v:"2026-11-08.17",n:"Audit fixes 2",i:["Mock scores like 61.67 (−1/3 marking) can be saved","Reset asks first; a tick right before closing the app is kept","Left open overnight, the journal date and countdowns move to the new day; odd backup values can't break any tab"]},
+ {v:"2026-11-16.18",n:"Audit fixes 3",i:["Hours like 1.67 (1h 40m) can be saved; a double tap on Save no longer logs twice","Exams marked Appeared or Selected stop counting as your next exam","Journal shows 50 entries at a time; signed in and offline now says Offline"]}
 ];
 const appVer=()=>(document.querySelector('meta[name="app-version"]')||{}).content||"";
 const short=v=>"v"+v.slice(5);
@@ -917,7 +920,7 @@ function weakHtml(){
  return h;
 }
 function trackMods(t){return TRACKS[t].phases.flatMap(p=>p.m);}
-function nextExam(t){return EXAMS.filter(e=>e.t===t).map(e=>({e,i:examInfo(e.id)})).filter(x=>x.i.date&&x.i.status!=="dropped"&&daysTo(x.i.date)>=0).sort((a,b)=>a.i.date.localeCompare(b.i.date))[0];}
+function nextExam(t){return EXAMS.filter(e=>e.t===t).map(e=>({e,i:examInfo(e.id)})).filter(x=>x.i.date&&!DONEST.includes(x.i.status)&&daysTo(x.i.date)>=0).sort((a,b)=>a.i.date.localeCompare(b.i.date))[0];}
 function planDates(t){
  const st=state.plan[t+"Start"]||iso(today());let acc=0;const o={};
  trackMods(t).forEach(m=>{const g=GUIDE[m];const a=acc;acc+=g.w;o[m]={from:addDays(st,Math.round(a*7)),to:addDays(st,Math.round(acc*7)-1)};});
@@ -1010,6 +1013,7 @@ document.addEventListener("click",ev=>{
  else if(b.dataset.cmclr){cm.type="all";cm.exams.clear();cm.match="any";cm.min=0;cm.subs.clear();renderCommon();}
  else if(b.dataset.cmsel!==undefined){cm.sel=b.dataset.cmsel||null;renderCommon();if(cm.sel)document.getElementById("cmdetail").scrollIntoView({behavior:"smooth",block:"nearest"});}
  else if(b.dataset.open){const m=b.dataset.open;const ex=EXAMS.find(e=>e.id===curExam&&examMods(e).includes(m))||EXAMS.find(e=>examMods(e).includes(m));curExam=ex.id;curSrc="";curDem="";openMods.add(m);renderSyllabus();showTab("syllabus");}
+ else if(b.dataset.more){ledgerN+=LEDGER_PAGE;renderLedger();}
  else if(b.dataset.del){if(b.dataset.confirm){pendingDel=null;delEntry(b.dataset.del);}else{pendingDel=b.dataset.del;renderLedger();setTimeout(()=>{if(pendingDel===b.dataset.del){pendingDel=null;renderLedger();}},4000);}}
 });
 document.getElementById("extable").addEventListener("focusin",()=>exTableFocus=true);
@@ -1020,8 +1024,8 @@ document.getElementById("v-guide").addEventListener("change",ev=>{const el=ev.ta
  else if(el.dataset.pyq){const pq={...state.plan.pyq,[el.dataset.pyq]:Math.min(100000,Math.max(0,Math.round(+el.value||0)))};el.blur();setPlan({pyq:pq});}});
 document.addEventListener("change",ev=>{const el=ev.target;if(el.dataset&&el.dataset.cur){el.blur();setCur(el.dataset.cur,el.value);}});
 document.getElementById("jExam").addEventListener("change",fillModules);
-document.getElementById("fExam").addEventListener("change",renderLedger);
-document.getElementById("fType").addEventListener("change",renderLedger);
+document.getElementById("fExam").addEventListener("change",()=>{ledgerN=LEDGER_PAGE;renderLedger();});
+document.getElementById("fType").addEventListener("change",()=>{ledgerN=LEDGER_PAGE;renderLedger();});
 const jType=document.getElementById("jType");
 const syncMock=()=>document.querySelectorAll(".mockf").forEach(f=>f.hidden=jType.value!=="Mock");
 jType.addEventListener("change",syncMock);
@@ -1030,11 +1034,14 @@ document.getElementById("jform").addEventListener("submit",async ev=>{
  const e={date:g("jDate"),hours:+g("jHours")||0,type:g("jType"),exam:g("jExam"),module:g("jModule"),topics:g("jTopics"),conf:+g("jConf")||3,well:g("jWell"),miss:g("jMiss"),next:g("jNext"),createdAt:Date.now()};
  if(e.type==="Mock"){e.score=g("jScore");e.total=g("jTotal");e.mockName=g("jMockName");}
  const toast=document.getElementById("jtoast");
- const bad=entryProblem(e);if(bad){toast.style.color="var(--bad)";toast.textContent=bad;return;}
+ const bad=entryProblem(e)||(isDupe(e)?"This exact entry was just saved. Change something to log another.":"");if(bad){toast.style.color="var(--bad)";toast.textContent=bad;return;}
  try{await addEntry(e);["jTopics","jScore","jTotal","jMockName","jWell","jMiss","jNext","jHours"].forEach(id=>document.getElementById(id).value="");toast.style.color="var(--ok)";toast.textContent="Saved";setTimeout(()=>toast.textContent="",2500);}
  catch(x){toast.style.color="var(--bad)";toast.textContent="Not saved ("+(x&&x.code||"error")+"). Check your connection and try again.";}
 });
 
+// A double tap on Save (or a slow phone) shouldn't log the same session twice.
+const DUPE_KEYS=["date","hours","type","exam","module","topics","conf","well","miss","next","score","total","mockName"];
+function isDupe(e){return state.journal.some(j=>(e.createdAt-(+j.createdAt||0))<120000&&DUPE_KEYS.every(k=>String(j[k]??"")===String(e[k]??"")));}
 // Catch typing mistakes before they skew stats, the chart and mock trends.
 function entryProblem(e){
  if(!validDate(e.date))return "Pick a real date.";
@@ -1091,6 +1098,9 @@ function listen(){
  unsubs.push(db.collection("settings").onSnapshot(s=>{s.docs.forEach(d=>{if(d.id==="plan"){state.plan=cleanPlan(d.data());}});renderAll();},err));
  unsubs.push(db.collection("journal").onSnapshot(s=>{state.journal=s.docs.map(d=>({...cleanEntry(d.data()||{}),id:d.id}));renderAll();},err));
 }
+// Signed in but offline: say so, instead of "Synced", until the connection is back.
+let syncLabel="";function netBadge(){if(mode!=="db")return;if(navigator.onLine){m.textContent=syncLabel;m.className="mode ok";}else{m.textContent="Offline · saved here, syncs when back online";m.className="mode warn";}}
+window.addEventListener("online",netBadge);window.addEventListener("offline",netBadge);
 function goLocal(msg){db=null;mode="local";loadLocal();m.textContent=msg;m.className="mode warn";renderAll();}
 let fbDb=null,fbUser=null;
 (async()=>{
@@ -1108,7 +1118,7 @@ let fbDb=null,fbUser=null;
   if(!u){unsubs.forEach(x=>x());unsubs=[];authBtn.textContent="Sign in to sync";goLocal("Saving on this device only");return;}
   authBtn.textContent="Sign out";
   loadLocal();const local=hasLocalData();
-  db=scoped(fbDb,u.uid);mode="db";m.textContent="Synced · "+(u.email||"signed in");m.className="mode ok";
+  db=scoped(fbDb,u.uid);mode="db";syncLabel="Synced · "+(u.email||"signed in");netBadge();
   try{const p=await db.collection("progress").get(),j=await db.collection("journal").get(),st=await db.collection("settings").get();
    if(local&&p.empty&&j.empty&&st.empty){pushLocalToCloud().catch(err);}}catch(e){}
   listen();
