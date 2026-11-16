@@ -84,6 +84,16 @@ const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+Stri
  // sync mode: a tick waiting in the batch is sent when the app is hidden/closed
  await p.evaluate(()=>{window.__s=[];mode='db';db={doc:k=>({set:x=>{__s.push(k);return Promise.resolve();}})};setTopic('sm',MODS.sm.ids[0],1);flushProgress();});
  ok((await p.evaluate(()=>__s))[0]==='progress/sm','pending tick flushed on close');await p.evaluate(()=>{mode='local';db=null;});
+ // week 3: 1h40m hours, double-save guard, appeared exams, paged journal, offline badge
+ await p.click('[data-tab=journal]');await p.fill('#jHours','1.67');ok(await p.$eval('#jHours',e=>e.checkValidity()),'1.67 hours accepted');
+ r=await entry({jDate:'2026-10-02',jHours:'1.67'});const n0=r.n;r=await entry({jDate:'2026-10-02',jHours:'1.67'});ok(r.n===n0&&/just saved/.test(r.toast),'double tap does not log twice');
+ await p.evaluate(()=>{const f=new Date();f.setDate(f.getDate()+5);const g=new Date();g.setDate(g.getDate()+40);state.exams.cgl={date:iso(f),confirmed:false,status:'appeared',notes:''};state.exams.ntpc={date:iso(g),confirmed:false,status:'prep',notes:''};saveLocal();});
+ await p.click('[data-tab=overview]');ok((await p.textContent('#stats')).includes('RRB NTPC'),'appeared exam is not the next exam');
+ await p.evaluate(()=>{for(let i=0;i<120;i++)state.journal.push({id:'p'+i,date:'2026-09-01',hours:1,type:'Study'});saveLocal();});
+ await p.click('[data-tab=journal]');const c1=await p.$$eval('#ledger .entry',e=>e.length);await p.click('[data-more]');const c2=await p.$$eval('#ledger .entry',e=>e.length);
+ ok(c1===50&&c2===100,'journal shows 50 at a time ('+c1+','+c2+')');
+ await p.evaluate(()=>{mode='db';syncLabel='Synced · test';});await ctx.setOffline(true);await p.waitForTimeout(100);const off=await p.textContent('#mode');await ctx.setOffline(false);await p.waitForTimeout(100);
+ ok(/Offline/.test(off)&&/Synced/.test(await p.textContent('#mode')),'sync badge shows offline');await p.evaluate(()=>{mode='local';});
  ok(errs.length===0,'no page errors'+(errs.length?': '+errs.join(' | '):''));
  // version + changelog in step
  const v=await p.getAttribute('meta[name=app-version]','content');ok(await p.evaluate(v=>UPDATES[UPDATES.length-1].v===v,v),'UPDATES has an entry for '+v);
