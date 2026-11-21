@@ -42,4 +42,4 @@ This is your own copy of the journal. It runs on GitHub Pages (free) and syncs w
 
 ## Checks (for whoever edits the app)
 
-`node tests/smoke.js` opens the app in a headless browser and clicks through every tab, then tries bad input on purpose: future dates, negative or 500 hours, more than 24h in a day, mock scores over the total, broken backup files, a save while offline. It needs Playwright with Chromium. Run it twice before calling a change done.
+`node tests/smoke.js` opens the app in a headless browser and clicks through every tab, then tries bad input on purpose: future dates, negative or 500 hours, more than 24h in a day, mock scores over the total, broken backup files, a save while offline, long pasted links at phone and iPad widths, full device storage, two tabs at once. It also runs sign-in, sign-out, offline start and 700-entry uploads against a stand-in for Firebase, and checks the offline cache in `sw.js`. It needs Playwright with Chromium. Run it twice before calling a change done.

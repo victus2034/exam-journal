@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <title>Shiva's Exam Journal</title>
-<meta name="app-version" content="2026-11-16.18">
+<meta name="app-version" content="2026-11-21.19">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2c4bd1">
@@ -90,6 +90,7 @@ nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--
 
 .two{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:12px;min-width:0;align-content:start}
+.panel>*,.view>*{min-width:0}
 .chart svg{width:100%;height:auto;display:block}
 .chart text{fill:var(--muted);font-family:var(--mono);font-size:10px}
 .mocks{display:grid;gap:10px}
@@ -233,7 +234,7 @@ table.cmt td.est{background:var(--sunk);color:var(--fg)}
 .revrow:first-child{border-top:0}
 .revrow .nm{font-size:.9rem}
 .btn.sm{padding:3px 10px;font-size:.8rem}
-.wl{margin:0;padding-left:18px;display:grid;gap:3px;font-size:.86rem}
+.wl{margin:0;padding-left:18px;display:grid;gap:3px;font-size:.86rem;overflow-wrap:anywhere}
 .two.eq{grid-template-columns:repeat(2,minmax(0,1fr))}
 .panel.now{border-color:var(--accent);gap:10px}
 .nowsub{display:flex;gap:12px;align-items:center}
@@ -268,7 +269,7 @@ textarea{min-height:62px;resize:vertical}
 .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .filters select{width:auto}
 .ledger{display:grid;gap:10px}
-.entry{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:8px}
+.entry{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:8px;min-width:0;overflow-wrap:anywhere}
 .entry .meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .entry .date{font-family:var(--mono);font-weight:600}
 .type{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:4px;background:var(--sunk);border:1px solid var(--line)}
@@ -385,14 +386,14 @@ textarea{min-height:62px;resize:vertical}
      <div class="f"><label for="jType">Type</label><select id="jType"><option>Study</option><option>Revision</option><option value="PYQ">PYQ practice</option><option>Mock</option></select></div>
      <div class="f"><label for="jExam">Exam</label><select id="jExam"></select></div>
      <div class="f w2"><label for="jModule">Subject</label><select id="jModule"></select></div>
-     <div class="f w2"><label for="jTopics">Topics covered</label><input id="jTopics" placeholder="e.g. Moment distribution, Kani's method"></div>
+     <div class="f w2"><label for="jTopics">Topics covered</label><input id="jTopics" maxlength="5000" placeholder="e.g. Moment distribution, Kani's method"></div>
      <div class="f mockf"><label for="jScore">Mock score</label><input type="number" id="jScore" step="any" placeholder="142.5"></div>
      <div class="f mockf"><label for="jTotal">Out of</label><input type="number" id="jTotal" step="1" placeholder="200"></div>
-     <div class="f mockf w2"><label for="jMockName">Mock name / source</label><input id="jMockName" placeholder="e.g. Testbook full mock 7"></div>
+     <div class="f mockf w2"><label for="jMockName">Mock name / source</label><input id="jMockName" maxlength="5000" placeholder="e.g. Testbook full mock 7"></div>
      <div class="f"><label for="jConf">Confidence</label><select id="jConf"><option value="1">1 · Shaky</option><option value="2">2</option><option value="3" selected>3 · Okay</option><option value="4">4</option><option value="5">5 · Strong</option></select></div>
-     <div class="f w3"><label for="jWell">What went well</label><textarea id="jWell" placeholder="Solved 20 RCC PYQs, 17 correct"></textarea></div>
-     <div class="f w2"><label for="jMiss">Mistakes / weak spots</label><textarea id="jMiss" placeholder="Mixed up Lacey and Kennedy silt factor"></textarea></div>
-     <div class="f w2"><label for="jNext">Next step</label><textarea id="jNext" placeholder="Redo canal design formulas tomorrow"></textarea></div>
+     <div class="f w3"><label for="jWell">What went well</label><textarea id="jWell" maxlength="5000" placeholder="Solved 20 RCC PYQs, 17 correct"></textarea></div>
+     <div class="f w2"><label for="jMiss">Mistakes / weak spots</label><textarea id="jMiss" maxlength="5000" placeholder="Mixed up Lacey and Kennedy silt factor"></textarea></div>
+     <div class="f w2"><label for="jNext">Next step</label><textarea id="jNext" maxlength="5000" placeholder="Redo canal design formulas tomorrow"></textarea></div>
     </div>
     <div class="row"><span class="toast" id="jtoast" aria-live="polite"></span><button class="btn" type="submit">Save entry</button></div>
    </form>
@@ -557,7 +558,10 @@ const state={exams:{},progress:{},journal:[],dates:{},revs:{},plan:{techStart:""
 let db=null, mode="loading";
 const LKEY="shiva-exam-journal-v1";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-function saveLocal(){if(mode!=="local")return;try{localStorage.setItem(LKEY,JSON.stringify(state));}catch(e){}}
+// A full or blocked device storage used to fail silently, so ticks and entries vanished on the next open. Say so on the badge instead.
+let localFail=false;
+function saveLocal(){if(mode!=="local")return;let ok=true;try{localStorage.setItem(LKEY,JSON.stringify(state));}catch(e){ok=false;}if(ok!==!localFail){localFail=!ok;localBadge();}}
+function localBadge(){if(mode!=="local")return;const b=document.getElementById("mode");b.textContent=localFail?"Not saved: this device's storage is full or blocked. Download a backup now.":"Saving on this device only";b.className="mode warn";}
 const obj=v=>v&&typeof v==="object"&&!Array.isArray(v)?v:{};
 let idSeq=0;const newId=()=>"l"+Date.now().toString(36)+(idSeq++).toString(36)+Math.random().toString(36).slice(2,6);
 // Clean data from storage or a backup file so one bad field cannot break the app (e.g. journal not a list, plan.pyq null, entries with no id).
@@ -574,6 +578,7 @@ function normalize(s){s=obj(s);const per=(o,f)=>Object.fromEntries(Object.entrie
  const journal=(Array.isArray(s.journal)?s.journal:[]).filter(j=>obj(j)===j).map(j=>{let id=typeof j.id==="string"&&j.id?j.id:"";if(!id||seen.has(id))id=newId();seen.add(id);return{...cleanEntry(j),id};});
  return{exams:Object.fromEntries(Object.entries(obj(s.exams)).filter(([k])=>EXBY[k]).map(([k,v])=>[k,cleanExam(v)])),progress:per(s.progress,v=>cleanMap(v,0,3)),dates:per(s.dates,cleanDates),revs:per(s.revs,v=>cleanMap(v,0,3)),journal,plan:cleanPlan(s.plan)};}
 function useData(s){Object.assign(state,normalize(s));}
+function resetState(){Object.assign(state,normalize({}));}
 function validDate(v){if(typeof v!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;const y=+v.slice(0,4),d=parse(v);return y>=2000&&y<=2100&&iso(d)===v;}
 function loadLocal(){try{const s=JSON.parse(localStorage.getItem(LKEY)||"null");if(s)useData(s);}catch(e){}}
 const ptimers={};
@@ -587,7 +592,7 @@ function applyTopic(mod,id,v){
 }
 function saveMod(mod){
  renderAll();
- if(mode==="db"){clearTimeout(ptimers[mod]);ptimers[mod]=setTimeout(()=>{db.doc("progress/"+mod).set({s:{...(state.progress[mod]||{})},d:{...(state.dates[mod]||{})},r:{...(state.revs[mod]||{})}}).catch(err).finally(()=>{delete ptimers[mod];});},700);}
+ if(mode==="db"){clearTimeout(ptimers[mod]);ptimers[mod]=setTimeout(()=>{if(!db){delete ptimers[mod];return;}db.doc("progress/"+mod).set({s:{...(state.progress[mod]||{})},d:{...(state.dates[mod]||{})},r:{...(state.revs[mod]||{})}}).catch(err).finally(()=>{delete ptimers[mod];});},700);}
  else saveLocal();
 }
 function setTopic(mod,id,v){applyTopic(mod,id,v);saveMod(mod);}
@@ -684,7 +689,7 @@ function entryHtml(j,full){
  const sc=j.type==="Mock"&&+j.total>0?`<span class="score">${esc(j.score)}/${esc(j.total)} · ${(Math.round(+j.score*1000/+j.total)/10)}%</span>`:"";
  const conf="●".repeat(+j.conf||0)+"○".repeat(5-(+j.conf||0));
  const notes=[["Went well",j.well],["Mistakes",j.miss],["Next",j.next]].filter(x=>x[1]);
- return `<div class="entry"><div class="meta"><span class="date">${fmtDate(j.date)}</span><span class="type ${esc(j.type)}">${j.type==="PYQ"?"PYQ practice":esc(j.type)}</span><span class="num">${(+j.hours||0)}h</span>${sc}<span class="conf" title="Confidence ${+j.conf||0} of 5">${conf}</span>${j.example?'<span class="ex-flag">Example</span>':""}
+ return `<div class="entry"><div class="meta"><span class="date">${fmtDate(j.date)}</span><span class="type ${esc(j.type)}">${j.type==="PYQ"?"PYQ practice":esc(j.type)}</span><span class="num">${+(+j.hours||0).toFixed(2)}h</span>${sc}<span class="conf" title="Confidence ${+j.conf||0} of 5">${conf}</span>${j.example?'<span class="ex-flag">Example</span>':""}
  ${full?`<span style="margin-left:auto"></span><button class="lnk" data-del="${esc(j.id)}">Delete</button>`:""}</div>
  <div class="exm">${esc(ex?ex.name:"General")}${md?" · "+esc(md.n):""}${j.mockName?" · "+esc(j.mockName):""}</div>
  ${j.topics?`<div style="font-size:.92rem">${esc(j.topics)}</div>`:""}
@@ -849,7 +854,8 @@ const UPDATES=[
  {v:"2026-10-26.15",n:"Drive material links",i:["Each civil topic has a 📁 Notes link to its chapter folder in your Drive","Each subject: open its folder + 📄 short notes PDF","📁 All material link in Syllabus"]},
  {v:"2026-11-01.16",n:"Audit fixes",i:["Journal: no future dates, max 24h a day, mock score must fit its total","Saving offline while signed in no longer hangs; restore replaces old data and never breaks the app","Restored entries can be deleted; bad exam dates are refused"]},
  {v:"2026-11-08.17",n:"Audit fixes 2",i:["Mock scores like 61.67 (−1/3 marking) can be saved","Reset asks first; a tick right before closing the app is kept","Left open overnight, the journal date and countdowns move to the new day; odd backup values can't break any tab"]},
- {v:"2026-11-16.18",n:"Audit fixes 3",i:["Hours like 1.67 (1h 40m) can be saved; a double tap on Save no longer logs twice","Exams marked Appeared or Selected stop counting as your next exam","Journal shows 50 entries at a time; signed in and offline now says Offline"]}
+ {v:"2026-11-16.18",n:"Audit fixes 3",i:["Hours like 1.67 (1h 40m) can be saved; a double tap on Save no longer logs twice","Exams marked Appeared or Selected stop counting as your next exam","Journal shows 50 entries at a time; signed in and offline now says Offline"]},
+ {v:"2026-11-21.19",n:"Audit fixes 4",i:["A long link in a journal entry no longer pushes the page off-screen; Guide sequence text fits on phones","Signed in: opens offline still sync, old device data can't overwrite synced data, 500+ entries upload, sign-out shows this device's data","Exam notes save while typing; full storage warns; two tabs don't wipe each other; Mark all done / Reset follow the filter"]}
 ];
 const appVer=()=>(document.querySelector('meta[name="app-version"]')||{}).content||"";
 const short=v=>"v"+v.slice(5);
@@ -871,15 +877,17 @@ function renderSyllabus(){
     return `<div class="mod ${open?"open":""}"><button class="modhead" data-mod="${m}" aria-expanded="${open}"><div style="min-width:0"><div class="t">${esc(M.n)}</div><div class="tags">${GUIDE[m]?chips(m):""}${M.g==="civil"?(M.folder?`<span class="fold">📁 ${esc(M.folder)}</span>`:`<span class="tg">No folder in your material</span>`):""}${M.g==="civil"?`<span class="gx">${M.src.filter(x=>x==="=").length} match · ${M.src.filter(x=>x==="-").length} no match · ${M.src.filter(x=>x==="+").length} mine</span>`:""}${e.stages.length>1?`<span class="gx">${modStages(e,m).map(s=>esc(s.split(" · ")[0])).join(" + ")}</span>`:""}</div></div>
   <div style="display:grid;gap:3px"><span class="small num muted">${pc.done}/${pc.total}</span><div class="bar"><i style="width:${Math.round(pc.done*100/pc.total)}%"></i></div></div><span class="caret">▸</span></button>
   ${open?`<div class="topics">${M.t.map((t,k)=>{if(curSrc&&M.src[k]!==curSrc)return "";const dm=topicDem(m,k);if(curDem&&dm!==curDem)return "";const v=pr[M.ids[k]]||0;const sg=SRC[M.src[k]];const te=topicExams(m,k);const nt=(TNT[m]||{})[k];const nx=!te.includes(curExam);return `<div class="topic${nx?" nx":""}"><span class="nm">${esc(t)}${sg?`<span class="mt ${sg[1]}">${sg[0]}</span>`:""}<span class="tq"><span class="dm d${dm}">${DEM[dm][0]} demand</span><span class="tx">${te.length} exam${te.length>1?"s":""}: ${te.map(x=>esc(EXS[x])).join(", ")}</span>${nt?`<span class="tx tn">${esc(nt)}</span>`:""}${nx?`<span class="tx nxl">Not asked in ${esc(EXS[curExam])}</span>`:""}${DRV[m]&&DRV[m].ch[k]?`<a class="tlk" href="${dfold(DRV[m].ch[k])}" target="_blank" rel="noopener">📁 Notes</a>`:""}</span></span><button class="sbtn ${v?"s"+v:""}" data-m="${m}" data-k="${k}">${TSTATE[v]}</button></div>`;}).join("")}</div>
-  <div class="modtools">${DRV[m]?`<a class="lnk" href="${dfold(DRV[m].f)}" target="_blank" rel="noopener">📁 Open ${esc(M.folder)} folder</a>${DRV[m].pdf?`<a class="lnk" href="${dfile(DRV[m].pdf)}" target="_blank" rel="noopener">📄 Short notes</a>`:""}`:""}<button class="lnk" data-all="${m}" data-v="2">Mark all done</button><button class="lnk" data-all="${m}" data-v="0">Reset</button></div>`:""}</div>`;}).join("");
+  <div class="modtools">${DRV[m]?`<a class="lnk" href="${dfold(DRV[m].f)}" target="_blank" rel="noopener">📁 Open ${esc(M.folder)} folder</a>${DRV[m].pdf?`<a class="lnk" href="${dfile(DRV[m].pdf)}" target="_blank" rel="noopener">📄 Short notes</a>`:""}`:""}<button class="lnk" data-all="${m}" data-v="2">${curSrc||curDem?"Mark shown done":"Mark all done"}</button><button class="lnk" data-all="${m}" data-v="0">${curSrc||curDem?"Reset shown":"Reset"}</button></div>`:""}</div>`;}).join("");
 }
+// With a Match / demand filter on, "Mark all done" and "Reset" only touch the topics you can see.
+const shownTopics=m=>MODS[m].t.map((_,k)=>k).filter(k=>(!curSrc||MODS[m].src[k]===curSrc)&&(!curDem||topicDem(m,k)===curDem));
 function renderExTable(){
  document.getElementById("extable").innerHTML=EXAMS.map(e=>{const i=examInfo(e.id);
  return `<div class="exrow"><div class="nm"><div style="font-weight:600">${esc(e.name)}</div><div class="small muted">${esc(i.label)}</div></div>
  <div class="f"><label for="d-${e.id}">Exam date</label><input type="date" id="d-${e.id}" data-ed="${e.id}" data-f="date" value="${esc(i.date)}"></div>
  <label class="chk"><input type="checkbox" id="c-${e.id}" data-ed="${e.id}" data-f="confirmed" ${i.confirmed?"checked":""}> Confirmed</label>
  <div class="f"><label for="s-${e.id}">Status</label><select id="s-${e.id}" data-ed="${e.id}" data-f="status">${STATUS.map(s=>`<option value="${s[0]}" ${s[0]===i.status?"selected":""}>${s[1]}</option>`).join("")}</select></div>
- <div class="f nt"><label for="n-${e.id}">Notes (roll no., centre, links)</label><textarea id="n-${e.id}" data-ed="${e.id}" data-f="notes" placeholder="Application no., exam centre…">${esc(i.notes)}</textarea></div></div>`;}).join("");
+ <div class="f nt"><label for="n-${e.id}">Notes (roll no., centre, links)</label><textarea id="n-${e.id}" data-ed="${e.id}" data-f="notes" maxlength="5000" placeholder="Application no., exam centre…">${esc(i.notes)}</textarea></div></div>`;}).join("");
 }
 function fillSelects(){
  const opts=`<option value="">General / all</option>`+EXAMS.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join("");
@@ -1000,7 +1008,9 @@ document.addEventListener("click",ev=>{
  else if(b.dataset.sel){curExam=b.dataset.sel;renderSyllabus();}
  else if(b.dataset.mod){const m=b.dataset.mod;openMods.has(m)?openMods.delete(m):openMods.add(m);renderSyllabus();}
  else if(b.dataset.m){const m=b.dataset.m,id=MODS[m].ids[+b.dataset.k];const v=((state.progress[m]||{})[id]||0);setTopic(m,id,(v+1)%4);}
- else if(b.dataset.all){const m=b.dataset.all,v=+b.dataset.v;if(!v&&Object.keys(state.progress[m]||{}).length&&!confirm("Reset every topic in "+MODS[m].n+" to Not started? This also clears its revision dates."))return;MODS[m].ids.forEach(i=>{const c=(state.progress[m]||{})[i]||0;applyTopic(m,i,v?Math.max(v,c):0);});saveMod(m);}
+ else if(b.dataset.all){const m=b.dataset.all,v=+b.dataset.v,ks=shownTopics(m),part=ks.length<MODS[m].ids.length,pr=state.progress[m]||{};
+  if(!v&&ks.some(k=>pr[MODS[m].ids[k]])&&!confirm(part?"Reset the "+ks.length+" topics shown in "+MODS[m].n+" to Not started? This also clears their revision dates.":"Reset every topic in "+MODS[m].n+" to Not started? This also clears its revision dates."))return;
+  ks.forEach(k=>{const i=MODS[m].ids[k];const c=(state.progress[m]||{})[i]||0;applyTopic(m,i,v?Math.max(v,c):0);});saveMod(m);}
  else if(b.dataset.now){const [m,k,v]=b.dataset.now.split("|");setTopic(m,MODS[m].ids[+k],+v);}
  else if(b.dataset.pin){const [t,m]=b.dataset.pin.split("|");setCur(t,m);}
  else if(b.dataset.rev){const [m,id]=b.dataset.rev.split("|");markRevised(m,id);}
@@ -1018,7 +1028,11 @@ document.addEventListener("click",ev=>{
 });
 document.getElementById("extable").addEventListener("focusin",()=>exTableFocus=true);
 document.getElementById("extable").addEventListener("focusout",()=>{exTableFocus=false;});
-document.getElementById("extable").addEventListener("change",ev=>{const el=ev.target;if(!el.dataset.ed)return;const v=el.type==="checkbox"?el.checked:el.value;setExam(el.dataset.ed,{[el.dataset.f]:v});});
+// Notes save 0.6s after the last key (and when the app is hidden), not only on blur: closing the app mid-note used to lose it.
+let noteT=null,notePend=null;
+function flushNote(){clearTimeout(noteT);noteT=null;if(!notePend)return;const [id,v]=notePend;notePend=null;if(v!==examInfo(id).notes)setExam(id,{notes:v});}
+document.getElementById("extable").addEventListener("input",ev=>{const el=ev.target;if(el.dataset.f!=="notes")return;notePend=[el.dataset.ed,el.value];clearTimeout(noteT);noteT=setTimeout(flushNote,600);});
+document.getElementById("extable").addEventListener("change",ev=>{const el=ev.target;if(!el.dataset.ed)return;if(el.dataset.f==="notes"){notePend=[el.dataset.ed,el.value];flushNote();return;}const v=el.type==="checkbox"?el.checked:el.value;setExam(el.dataset.ed,{[el.dataset.f]:v});});
 document.getElementById("v-guide").addEventListener("change",ev=>{const el=ev.target;
  if(el.id==="gStart"){el.blur();if(el.value&&!validDate(el.value)){alert("That start date doesn't look right. Pick a real date between 2000 and 2100.");renderGuide();return;}setPlan({[curTrack+"Start"]:el.value});}
  else if(el.dataset.pyq){const pq={...state.plan.pyq,[el.dataset.pyq]:Math.min(100000,Math.max(0,Math.round(+el.value||0)))};el.blur();setPlan({pyq:pq});}});
@@ -1029,14 +1043,15 @@ document.getElementById("fType").addEventListener("change",()=>{ledgerN=LEDGER_P
 const jType=document.getElementById("jType");
 const syncMock=()=>document.querySelectorAll(".mockf").forEach(f=>f.hidden=jType.value!=="Mock");
 jType.addEventListener("change",syncMock);
+let toastT=null;
 document.getElementById("jform").addEventListener("submit",async ev=>{
  ev.preventDefault();const g=id=>document.getElementById(id).value.trim();
  const e={date:g("jDate"),hours:+g("jHours")||0,type:g("jType"),exam:g("jExam"),module:g("jModule"),topics:g("jTopics"),conf:+g("jConf")||3,well:g("jWell"),miss:g("jMiss"),next:g("jNext"),createdAt:Date.now()};
  if(e.type==="Mock"){e.score=g("jScore");e.total=g("jTotal");e.mockName=g("jMockName");}
  const toast=document.getElementById("jtoast");
- const bad=entryProblem(e)||(isDupe(e)?"This exact entry was just saved. Change something to log another.":"");if(bad){toast.style.color="var(--bad)";toast.textContent=bad;return;}
- try{await addEntry(e);["jTopics","jScore","jTotal","jMockName","jWell","jMiss","jNext","jHours"].forEach(id=>document.getElementById(id).value="");toast.style.color="var(--ok)";toast.textContent="Saved";setTimeout(()=>toast.textContent="",2500);}
- catch(x){toast.style.color="var(--bad)";toast.textContent="Not saved ("+(x&&x.code||"error")+"). Check your connection and try again.";}
+ const bad=entryProblem(e)||(isDupe(e)?"This exact entry was just saved. Change something to log another.":"");if(bad){clearTimeout(toastT);toast.style.color="var(--bad)";toast.textContent=bad;return;}
+ try{await addEntry(e);["jTopics","jScore","jTotal","jMockName","jWell","jMiss","jNext","jHours"].forEach(id=>document.getElementById(id).value="");toast.style.color="var(--ok)";toast.textContent="Saved";clearTimeout(toastT);toastT=setTimeout(()=>toast.textContent="",2500);}
+ catch(x){clearTimeout(toastT);toast.style.color="var(--bad)";toast.textContent="Not saved ("+(x&&x.code||"error")+"). Check your connection and try again.";}
 });
 
 // A double tap on Save (or a slow phone) shouldn't log the same session twice.
@@ -1060,12 +1075,15 @@ function entryProblem(e){
 // The app often stays open for days (home-screen app): roll the journal date and countdowns over when the day changes.
 let shownDay=iso(today());
 function dayCheck(){const t=iso(today());const jd=document.getElementById("jDate");jd.max=t;if(t!==shownDay){if(jd.value===shownDay)jd.value=t;shownDay=t;renderAll();}}
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")dayCheck();else flushProgress();});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")dayCheck();else{flushNote();flushProgress();}});
 window.addEventListener("focus",dayCheck);setInterval(dayCheck,60000);
 document.getElementById("jDate").addEventListener("focus",dayCheck);
+// Two tabs/windows on "this device" mode: a save in one used to be wiped by the next save in the other. Pick up the other tab's save.
+window.addEventListener("storage",e=>{if(e.key===LKEY&&mode==="local"){resetState();loadLocal();renderAll();}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".dlg,.bkdlg").forEach(d=>d.remove());});
 // Send ticks waiting in the 0.7s batch now, so closing the app right after a tap doesn't lose it.
 function flushProgress(){if(mode!=="db")return;for(const k in ptimers){clearTimeout(ptimers[k]);db.doc("progress/"+k).set({s:{...(state.progress[k]||{})},d:{...(state.dates[k]||{})},r:{...(state.revs[k]||{})}}).catch(err);delete ptimers[k];}}
-window.addEventListener("pagehide",flushProgress);
+window.addEventListener("pagehide",()=>{flushNote();flushProgress();});
 document.getElementById("jDate").value=iso(today());document.getElementById("jDate").max=iso(today());
 fillSelects();syncMock();
 document.addEventListener("click",ev=>{const d=document.querySelector(".cmpick[open]");if(d&&(!d.contains(ev.target)||ev.target.closest("[data-cmdone]")))d.open=false;});
@@ -1078,18 +1096,22 @@ renderAll();
 const m=document.getElementById("mode"),authBtn=document.getElementById("authBtn");
 let unsubs=[];
 function scoped(fs,uid){const base="users/"+uid+"/";return{doc:p=>fs.doc(base+p),collection:c=>fs.collection(base+c)};}
-function hasLocalData(){return state.journal.some(j=>!j.example)||Object.values(state.progress).some(o=>Object.keys(o||{}).length)||Object.keys(state.exams).length||!!state.plan.techStart;}
+function hasLocalData(){return state.journal.some(j=>!j.example)||Object.values(state.progress).some(o=>Object.keys(o||{}).length)||Object.keys(state.exams).length||!!state.plan.techStart||!!state.plan.nonStart||Object.keys(state.plan.pyq||{}).length>0||Object.values(state.plan.cur||{}).some(Boolean);}
 // replace = {journal,progress,exams} ids already in the cloud; any not in the local data are deleted (restore replaces, not merges).
-function pushLocalToCloud(replace){
- const b=fbDb.batch();const sc=scoped(fbDb,fbUser.uid);
- Object.keys(MODS).forEach(k=>{if(state.progress[k]&&Object.keys(state.progress[k]).length)b.set(sc.doc("progress/"+k),{s:state.progress[k],d:state.dates[k]||{},r:state.revs[k]||{}});else if(replace&&replace.progress.includes(k))b.delete(sc.doc("progress/"+k));});
- for(const k in state.exams)b.set(sc.doc("exams/"+k),state.exams[k]);
- if(replace)replace.exams.filter(k=>!state.exams[k]).forEach(k=>b.delete(sc.doc("exams/"+k)));
- b.set(sc.doc("settings/plan"),JSON.parse(JSON.stringify(state.plan)));
- const keep=state.journal.filter(j=>!j.example);keep.forEach(j=>{const {id,...x}=j;b.set(sc.doc("journal/"+(id||newId())),x);});
- if(replace){const ids=new Set(keep.map(j=>j.id));replace.journal.filter(id=>!ids.has(id)).forEach(id=>b.delete(sc.doc("journal/"+id)));}
- return b.commit();
+// S = the data to upload (default: what is on screen).
+function pushLocalToCloud(replace,S){
+ S=S||state;const sc=scoped(fbDb,fbUser.uid);const ops=[];const put=(p,d)=>ops.push(b=>b.set(sc.doc(p),d)),del=p=>ops.push(b=>b.delete(sc.doc(p)));
+ Object.keys(MODS).forEach(k=>{if(S.progress[k]&&Object.keys(S.progress[k]).length)put("progress/"+k,{s:S.progress[k],d:S.dates[k]||{},r:S.revs[k]||{}});else if(replace&&replace.progress.includes(k))del("progress/"+k);});
+ for(const k in S.exams)put("exams/"+k,S.exams[k]);
+ if(replace)replace.exams.filter(k=>!S.exams[k]).forEach(k=>del("exams/"+k));
+ put("settings/plan",JSON.parse(JSON.stringify(S.plan)));
+ const keep=S.journal.filter(j=>!j.example);keep.forEach(j=>{const {id,...x}=j;put("journal/"+(id||newId()),x);});
+ if(replace){const ids=new Set(keep.map(j=>j.id));replace.journal.filter(id=>!ids.has(id)).forEach(id=>del("journal/"+id));}
+ // Firestore takes at most 500 writes in one batch. A few hundred journal entries is more than that, so send it in parts.
+ let done=Promise.resolve();for(let i=0;i<ops.length;i+=BATCH_MAX){const part=ops.slice(i,i+BATCH_MAX);done=done.then(()=>{const b=fbDb.batch();part.forEach(f=>f(b));return b.commit();});}
+ return done;
 }
+const BATCH_MAX=400;
 function listen(){
  unsubs.forEach(u=>u());unsubs=[];
  unsubs.push(db.collection("exams").onSnapshot(s=>{const o={};s.docs.forEach(d=>{if(EXBY[d.id])o[d.id]=cleanExam(d.data());});state.exams=o;renderAll();},err));
@@ -1101,7 +1123,8 @@ function listen(){
 // Signed in but offline: say so, instead of "Synced", until the connection is back.
 let syncLabel="";function netBadge(){if(mode!=="db")return;if(navigator.onLine){m.textContent=syncLabel;m.className="mode ok";}else{m.textContent="Offline · saved here, syncs when back online";m.className="mode warn";}}
 window.addEventListener("online",netBadge);window.addEventListener("offline",netBadge);
-function goLocal(msg){db=null;mode="local";loadLocal();m.textContent=msg;m.className="mode warn";renderAll();}
+// Signed out: show this device's own data (the account's data used to stay on screen, and edits to it were lost at the next sign-in).
+function goLocal(msg){db=null;mode="local";resetState();loadLocal();m.textContent=msg;m.className="mode warn";localBadge();renderAll();}
 let fbDb=null,fbUser=null;
 (async()=>{
  const cfg=window.FIREBASE_CONFIG;
@@ -1110,18 +1133,21 @@ let fbDb=null,fbUser=null;
  try{await fbDb.enablePersistence({synchronizeTabs:true});}catch(e){}
  const prov=new firebase.auth.GoogleAuthProvider();
  authBtn.hidden=false;
- authBtn.onclick=async()=>{if(fbUser){await firebase.auth().signOut();return;}
+ authBtn.onclick=async()=>{if(fbUser){flushNote();flushProgress();await firebase.auth().signOut();return;}
   try{await firebase.auth().signInWithPopup(prov);}catch(e){if(e&&/popup|operation-not-supported/i.test(e.code||""))firebase.auth().signInWithRedirect(prov);else alert("Sign-in failed: "+(e.message||e));}};
  firebase.auth().getRedirectResult().catch(()=>{});
  firebase.auth().onAuthStateChanged(async u=>{
   fbUser=u;
   if(!u){unsubs.forEach(x=>x());unsubs=[];authBtn.textContent="Sign in to sync";goLocal("Saving on this device only");return;}
   authBtn.textContent="Sign out";
-  loadLocal();const local=hasLocalData();
-  db=scoped(fbDb,u.uid);mode="db";syncLabel="Synced · "+(u.email||"signed in");netBadge();
-  try{const p=await db.collection("progress").get(),j=await db.collection("journal").get(),st=await db.collection("settings").get();
-   if(local&&p.empty&&j.empty&&st.empty){pushLocalToCloud().catch(err);}}catch(e){}
+  // Device-only data is uploaded once, into an empty account. Listen at once (the screen used to show the old device copy, and a tap could
+  // write it over synced ticks, until three server reads finished: ~10s offline), and ask the server itself whether the account is empty:
+  // offline, the cache can look empty and old device data was uploaded over the synced data.
+  resetState();loadLocal();const local=hasLocalData()?JSON.parse(JSON.stringify(state)):null;resetState();
+  db=scoped(fbDb,u.uid);mode="db";syncLabel="Synced · "+(u.email||"signed in");netBadge();renderAll();
   listen();
+  if(local){try{const r=await Promise.all(["progress","journal","settings","exams"].map(c=>db.collection(c).limit(1).get({source:"server"})));
+   if(r.every(x=>x.empty)&&fbUser===u)pushLocalToCloud(null,local).catch(err);}catch(e){}}
  });
 })();
 </script>
@@ -1132,8 +1158,8 @@ document.getElementById("bkBtn").onclick=()=>{
  document.body.appendChild(d);const close=()=>d.remove();d.onclick=e=>{if(e.target===d)close();};d.querySelector("#bkX").onclick=close;
  d.querySelector("#bkOut").onclick=()=>{const data={app:"shiva-exam-journal",v:1,at:new Date().toISOString(),exams:state.exams,progress:state.progress,dates:state.dates,revs:state.revs,journal:state.journal.filter(j=>!j.example),plan:state.plan};
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:"application/json"}));a.download="exam-journal-backup-"+iso(today())+".json";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);};
- d.querySelector("#bkIn").onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{const x=JSON.parse(await f.text());if(x.app!=="shiva-exam-journal")throw new Error("Not an exam journal backup");
-  if(!confirm("Replace the data here with this backup from "+(x.at||"").slice(0,10)+"?"))return;
+ d.querySelector("#bkIn").onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{let x;try{x=JSON.parse(await f.text());}catch(_){throw new Error("This file is not a backup (not valid JSON).");}if(!x||x.app!=="shiva-exam-journal")throw new Error("Not an exam journal backup");
+  const at=String(x.at||"").slice(0,10);if(!confirm("Replace the data here with this backup"+(validDate(at)?" from "+at:"")+"?"))return;
   const was={journal:state.journal.map(j=>j.id),progress:Object.keys(state.progress),exams:Object.keys(state.exams)};
   useData(x);
   if(mode==="db"&&fbDb&&fbUser){pushLocalToCloud(was).catch(err);}else{saveLocal();}renderAll();close();alert("Backup restored.");}catch(e){alert("Could not restore: "+e.message);}};
