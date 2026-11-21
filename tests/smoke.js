@@ -94,8 +94,102 @@ const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+Stri
  ok(c1===50&&c2===100,'journal shows 50 at a time ('+c1+','+c2+')');
  await p.evaluate(()=>{mode='db';syncLabel='Synced · test';});await ctx.setOffline(true);await p.waitForTimeout(100);const off=await p.textContent('#mode');await ctx.setOffline(false);await p.waitForTimeout(100);
  ok(/Offline/.test(off)&&/Synced/.test(await p.textContent('#mode')),'sync badge shows offline');await p.evaluate(()=>{mode='local';});
+
+ // week 4 (2026-11-21 audit)
+ // long unbroken text (a pasted link) must not push the page wider than a phone / iPad screen; Guide sequence text not clipped
+ await p.setViewportSize({width:390,height:844});
+ await p.evaluate(()=>{state.journal.push({id:'lnk',date:'2026-09-15',hours:1,type:'Study',topics:'https://drive.google.com/drive/folders/'+'x'.repeat(240),miss:'y'.repeat(240),createdAt:Date.now()});saveLocal();renderAll();});
+ for(const t of ['journal','overview','guide']){await p.click(`[data-tab=${t}]`);ok(await p.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),'phone: '+t+' fits the screen with a long link');}
+ ok(await p.evaluate(()=>{const g=document.getElementById('gseq'),h=g.parentElement.firstElementChild;return h.getBoundingClientRect().right<=g.parentElement.getBoundingClientRect().right+1;}),'phone: Guide sequence text not cut off');
+ await p.setViewportSize({width:820,height:1180});await p.click('[data-tab=journal]');ok(await p.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),'iPad portrait: journal fits');
+ await p.setViewportSize({width:1280,height:720});
+ ok(await p.evaluate(()=>['jTopics','jMockName','jWell','jMiss','jNext','n-cgl'].every(id=>document.getElementById(id)?document.getElementById(id).maxLength===5000:true)&&document.getElementById('jWell').maxLength===5000),'free text capped at 5000 (longer was cut on reload)');
+ ok(await p.evaluate(()=>entryHtml({id:'h',date:'2026-09-15',hours:1.3333333,type:'Study',conf:3},true).includes('>1.33h<')),'hours shown rounded');
+ // Mark all done / Reset with a demand filter on: only the shown topics
+ await p.evaluate(()=>{curExam='sscje';curSrc='';curDem='';openMods.clear();MODS.rcc.ids.forEach(i=>applyTopic('rcc',i,0));saveMod('rcc');});
+ await p.click('[data-tab=syllabus]');await p.click('[data-dem=H]');const nH=await p.evaluate(()=>MODS.rcc.t.filter((_,k)=>topicDem('rcc',k)==='H').length);
+ ok((await p.textContent('[data-all=rcc][data-v="2"]'))==='Mark shown done','filtered button says "Mark shown done"');
+ await p.click('[data-all=rcc][data-v="2"]');ok(await p.evaluate(()=>modPct('rcc').done)===nH&&nH<17,'filtered Mark done only ticks the '+nH+' shown topics');
+ await p.click('[data-all=rcc][data-v="0"]');ok(dialogs.some(d=>/Reset the \d+ topics shown/.test(d))&&(await p.evaluate(()=>modPct('rcc').done))===0,'filtered Reset asks about the shown topics');
+ await p.click('[data-dem=""]');ok((await p.textContent('[data-all=rcc][data-v="2"]'))==='Mark all done','no filter: "Mark all done"');
+ // exam notes save while typing, and when the app is closed mid-note
+ await p.click('[data-tab=exams]');await p.click('#n-cgl');await p.fill('#n-cgl','');await p.keyboard.type('Roll 42');await p.waitForTimeout(900);
+ ok(await p.evaluate(()=>document.activeElement.id==='n-cgl'&&state.exams.cgl.notes==='Roll 42'&&JSON.parse(localStorage.getItem(LKEY)).exams.cgl.notes==='Roll 42'),'exam notes save while typing');
+ await p.keyboard.type(' centre');await p.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
+ ok(await p.evaluate(()=>JSON.parse(localStorage.getItem(LKEY)).exams.cgl.notes==='Roll 42 centre'),'exam notes kept when the app closes mid-note');
+ await p.click('[data-tab=journal]');
+ // an old "Saved" timer must not wipe a newer warning
+ r=await entry({jDate:'2026-09-20',jHours:'0.5'});ok(r.toast==='Saved','toast: saved');r=await entry({jDate:'2026-09-20',jHours:'0.5'});await p.waitForTimeout(2600);
+ ok(/just saved/.test(await p.textContent('#jtoast')),'toast: warning stays after the old Saved timer');
+ // device storage full / blocked: say so instead of losing data silently
+ await p.evaluate(()=>{window.__si=Storage.prototype.setItem;Storage.prototype.setItem=function(){throw new DOMException('full','QuotaExceededError');};setTopic('sm',MODS.sm.ids[1],1);});
+ ok(/Not saved/.test(await p.textContent('#mode')),'full storage shows a warning');
+ await p.evaluate(()=>{Storage.prototype.setItem=window.__si;setTopic('sm',MODS.sm.ids[1],2);});ok((await p.textContent('#mode'))==='Saving on this device only','warning clears once a save works');
+ // two tabs on this device: one tab's save must not wipe the other's
+ const p2=await ctx.newPage();p2.on('pageerror',e=>errs.push('tab2: '+e.message));await p2.route(/gstatic|googleapis/,r=>r.abort());await p2.goto(url);await p2.waitForFunction(()=>document.getElementById('mode').textContent.includes('device'));
+ await p2.evaluate(()=>addEntry({date:'2026-09-21',hours:1,type:'Study',topics:'from tab 2',conf:3,createdAt:Date.now()}));await p.waitForTimeout(200);
+ await p.evaluate(()=>setTopic('sm',MODS.sm.ids[2],1));await p2.close();
+ ok(await p.evaluate(()=>{const s=JSON.parse(localStorage.getItem(LKEY));return s.journal.some(j=>j.topics==='from tab 2')&&s.progress.sm[MODS.sm.ids[2]]===1;}),'two tabs: both saves kept');
+ // odd restore files: friendly messages, no crash
+ await p.click('#bkBtn');const nul=path.join(tmp,'null.json');fs.writeFileSync(nul,'null');await p.setInputFiles('#bkIn',nul);await p.waitForTimeout(150);
+ ok(dialogs.some(d=>/Could not restore: Not an exam journal backup/.test(d)),'restore: "null" file refused plainly');
+ const txt=path.join(tmp,'notes.txt');fs.writeFileSync(txt,'hello');await p.setInputFiles('#bkIn',txt);await p.waitForTimeout(150);ok(dialogs.some(d=>/not valid JSON/.test(d)),'restore: non-JSON file refused plainly');
+ const odd=path.join(tmp,'odd.json');fs.writeFileSync(odd,JSON.stringify({app:'shiva-exam-journal',at:12345,journal:[]}));
+ p.removeAllListeners('dialog');p.once('dialog',d=>{dialogs.push(d.message());d.dismiss();});await p.setInputFiles('#bkIn',odd);await p.waitForTimeout(150);p.on('dialog',d=>{dialogs.push(d.message());d.accept();});
+ ok(dialogs[dialogs.length-1]==='Replace the data here with this backup?','restore: odd "at" value does not break restore');await p.click('#bkX');
+ // Escape closes dialogs
+ await p.click('#appVerPill');await p.keyboard.press('Escape');ok(!(await p.$('.dlg')),'Escape closes What\'s new');
  ok(errs.length===0,'no page errors'+(errs.length?': '+errs.join(' | '):''));
  // version + changelog in step
  const v=await p.getAttribute('meta[name=app-version]','content');ok(await p.evaluate(v=>UPDATES[UPDATES.length-1].v===v,v),'UPDATES has an entry for '+v);
+
+ // ---- sync mode, with a stand-in for Firebase (in-memory "cloud") ----
+ const FAKE_FB=`(()=>{const I=window.__fsInit||{};const F=window.__fs={docs:I.docs||{},online:I.online!==false,user:I.user||null,commits:[],listeners:[],authCb:null};
+ const clone=x=>JSON.parse(JSON.stringify(x));const notify=()=>F.listeners.slice().forEach(l=>l());const later=(v,ms)=>new Promise(r=>setTimeout(()=>r(v),ms||0));
+ class D{constructor(p){this.path=p;this.id=p.split('/').pop();}set(d){F.docs[this.path]=clone(d);notify();return Promise.resolve();}delete(){delete F.docs[this.path];notify();return Promise.resolve();}}
+ class C{constructor(p){this.path=p;}doc(id){return new D(this.path+'/'+(id||'a'+Math.random().toString(36).slice(2,12)));}
+  _docs(){if(!F.online&&I.emptyCache)return [];const pre=this.path+'/';return Object.keys(F.docs).filter(k=>k.startsWith(pre)&&!k.slice(pre.length).includes('/')).map(k=>({id:k.slice(pre.length),data:()=>clone(F.docs[k])}));}
+  limit(){return this;}
+  get(o){if(o&&o.source==='server'&&!F.online)return Promise.reject({code:'unavailable'});const d=this._docs();return later({empty:!d.length,docs:d},I.getDelay);}
+  onSnapshot(cb){const l=()=>{const d=this._docs();cb({empty:!d.length,docs:d});};F.listeners.push(l);setTimeout(l,0);return()=>{F.listeners=F.listeners.filter(x=>x!==l);};}}
+ const fs={enablePersistence:()=>Promise.resolve(),doc:p=>new D(p),collection:p=>new C(p),
+  batch:()=>{const ops=[];return{set:(r,d)=>ops.push(()=>{F.docs[r.path]=clone(d);}),delete:r=>ops.push(()=>{delete F.docs[r.path];}),commit:()=>{F.commits.push(ops.length);if(ops.length>500)return Promise.reject({code:'invalid-argument'});ops.forEach(f=>f());notify();return Promise.resolve();}};}};
+ const auth={onAuthStateChanged(cb){F.authCb=cb;setTimeout(()=>cb(F.user),0);},getRedirectResult:()=>Promise.resolve(),
+  signInWithPopup(){F.user={uid:'u1',email:'me@test'};setTimeout(()=>F.authCb(F.user),0);return Promise.resolve();},signOut(){F.user=null;setTimeout(()=>F.authCb(null),0);return Promise.resolve();}};
+ const af=()=>auth;af.GoogleAuthProvider=function(){};window.firebase={initializeApp(){},firestore:()=>fs,auth:af};})();`;
+ async function fbPage(init,local){const c=await b.newContext();await c.addInitScript(([i,l])=>{window.__fsInit=i;if(l)localStorage.setItem('shiva-exam-journal-v1',JSON.stringify(l));},[init,local]);
+  const q=await c.newPage();const e=[];q.on('pageerror',x=>e.push(x.message));q.on('dialog',d=>d.accept());
+  await q.route(/gstatic|googleapis/,r=>{const u=r.request().url();return /firebase-app-compat/.test(u)?r.fulfill({contentType:'text/javascript',body:FAKE_FB}):/firebasejs/.test(u)?r.fulfill({contentType:'text/javascript',body:''}):r.abort();});
+  await q.goto(url);return {c,q,e};}
+ const U={uid:'u1',email:'me@test'},jdocs=(q)=>q.evaluate(()=>Object.keys(__fs.docs).filter(k=>k.startsWith('users/u1/journal/')).length);
+ // signed in on a device that also has old device-only data: the screen shows synced data at once (not the device copy while slow reads run)
+ let s1=await fbPage({user:U,getDelay:1500,docs:{'users/u1/journal/c1':{date:'2026-10-01',hours:2,type:'Study',createdAt:1}}},{journal:[{id:'dev1',date:'2026-09-01',hours:1,type:'Study'}]});
+ await s1.q.waitForTimeout(400);ok((await s1.q.evaluate(()=>state.journal.map(j=>j.id).join()))==='c1','sync: synced data shows at once, not the device copy');
+ await s1.q.waitForTimeout(1500);ok((await s1.q.evaluate(()=>__fs.commits.length))===0,'sync: account with data is not overwritten by device data');
+ // sign out with a tick still waiting in the batch: no crash, the tick is sent, then this device's own data shows
+ await s1.q.evaluate(()=>setTopic('sm',MODS.sm.ids[0],1));await s1.q.click('#authBtn');await s1.q.waitForTimeout(1200);
+ ok(s1.e.length===0&&(await s1.q.evaluate(()=>!!__fs.docs['users/u1/progress/sm']&&state.journal.map(j=>j.id).join()==='dev1')),'sign out: pending tick sent, device data shown'+(s1.e.length?' ('+s1.e.join(' | ')+')':''));await s1.c.close();
+ let s2=await fbPage({user:U,docs:{'users/u1/journal/c1':{date:'2026-10-01',hours:2,type:'Study',createdAt:1}}},null);await s2.q.waitForTimeout(300);await s2.q.click('#authBtn');await s2.q.waitForTimeout(300);
+ ok((await s2.q.evaluate(()=>state.journal.length))===0,'sign out: account data leaves the screen');await s2.c.close();
+ // opened offline with an empty cache: never upload old device data over the account
+ let s3=await fbPage({user:U,online:false,emptyCache:true,docs:{'users/u1/progress/sm':{s:{a:2,b:2},d:{},r:{}}}},{progress:{sm:{a:1}}});await s3.q.waitForTimeout(600);
+ ok(await s3.q.evaluate(()=>__fs.commits.length===0&&__fs.docs['users/u1/progress/sm'].s.b===2),'offline start: device data not uploaded over synced ticks');await s3.c.close();
+ // first sign-in with 700 device entries, then restoring a 600-entry backup over it: Firestore's 500-writes-per-batch limit
+ const big=n=>Array.from({length:n},(_,i)=>({id:'e'+i,date:'2026-0'+(1+i%9)+'-1'+(i%9),hours:1,type:'Study',createdAt:i}));
+ let s4=await fbPage({user:null,docs:{}},{journal:big(700)});await s4.q.waitForFunction(()=>document.getElementById('mode').textContent.includes('device'));await s4.q.click('#authBtn');await s4.q.waitForTimeout(800);
+ let cm=await s4.q.evaluate(()=>__fs.commits);ok(cm.length>1&&cm.every(n=>n<=500)&&(await jdocs(s4.q))===700&&(await s4.q.evaluate(()=>state.journal.length))===700,'first sign-in uploads 700 entries in parts ('+cm.join(',')+')');
+ const bk=path.join(tmp,'big.json');fs.writeFileSync(bk,JSON.stringify({app:'shiva-exam-journal',at:'2026-11-20',journal:big(600).map(j=>({...j,id:'n'+j.id}))}));
+ await s4.q.click('#bkBtn');await s4.q.setInputFiles('#bkIn',bk);await s4.q.waitForTimeout(800);cm=await s4.q.evaluate(()=>__fs.commits.slice(-4));
+ ok((await s4.q.evaluate(()=>__fs.commits.every(n=>n<=500)))&&(await jdocs(s4.q))===600&&(await s4.q.evaluate(()=>Object.keys(__fs.docs).filter(k=>k.startsWith('users/u1/journal/n')).length))===600,'restore of 600 over 700 synced entries goes through');
+ ok(s4.e.length===0,'sync tests: no page errors'+(s4.e.length?': '+s4.e.join(' | '):''));await s4.c.close();
+ // service worker: Firebase scripts come back "opaque"; they must be kept for offline opens
+ {const vm=require('vm');const store=new Map();let net;const H={};const cache={match:async r=>store.get(r.url),put:async(r,x)=>{store.set(r.url,x);},addAll:async()=>{}};
+  const sc={self:{addEventListener:(t,f)=>H[t]=f,skipWaiting(){},clients:{claim(){}}},caches:{open:async()=>cache,keys:async()=>[]},location:{origin:'https://victus2034.github.io'},URL,fetch:r=>net(r)};
+  vm.createContext(sc);vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),sc);
+  const go=(u,n)=>{net=n;let out;H.fetch({request:{url:u,method:'GET'},respondWith:x=>out=x});return out;};
+  const opq={ok:false,type:'opaque',status:0,clone(){return this;}},fb='https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js';
+  await go(fb,()=>Promise.resolve(opq));const off=await go(fb,()=>Promise.reject(new Error('offline')));
+  await go('https://victus2034.github.io/exam-journal/nope.js',()=>Promise.resolve({ok:false,type:'basic',status:404,clone(){return this;}}));
+  ok(off===opq&&!store.has('https://victus2034.github.io/exam-journal/nope.js'),'offline: Firebase script served from the app cache, 404s not cached');}
  await b.close();srv.close();console.log(fails?fails+' failed':'all passed');process.exit(fails?1:0);
 })().catch(e=>{console.error(e);process.exit(1);});
