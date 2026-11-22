@@ -139,6 +139,13 @@ const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+Stri
  ok(dialogs[dialogs.length-1]==='Replace the data here with this backup?','restore: odd "at" value does not break restore');await p.click('#bkX');
  // Escape closes dialogs
  await p.click('#appVerPill');await p.keyboard.press('Escape');ok(!(await p.$('.dlg')),'Escape closes What\'s new');
+ // week 5: tab bar keys, dialog focus
+ await p.click('[data-tab=overview]');await p.focus('#t-overview');await p.keyboard.press('ArrowRight');
+ ok((await p.evaluate(()=>document.activeElement.id))==='t-guide'&&await p.isVisible('#v-guide')&&(await p.getAttribute('#t-guide','aria-controls'))==='v-guide','arrow key moves to the next tab');
+ await p.keyboard.press('End');ok((await p.evaluate(()=>document.activeElement.id))==='t-exams','End goes to the last tab');await p.keyboard.press('ArrowRight');ok((await p.evaluate(()=>document.activeElement.id))==='t-overview','wraps to the first tab');
+ await p.focus('#appVerPill');await p.keyboard.press('Enter');ok(await p.evaluate(()=>!!document.activeElement.closest('.dlg')),'What\'s new takes focus');
+ await p.keyboard.press('Escape');ok(!(await p.$('.dlg'))&&(await p.evaluate(()=>document.activeElement.id))==='appVerPill','Escape closes and focus goes back');
+ await p.click('#bkBtn');ok(await p.evaluate(()=>!!document.activeElement.closest('.bkdlg')),'Backup takes focus');await p.click('#bkX');ok((await p.evaluate(()=>document.activeElement.id))==='bkBtn','Backup close returns focus');
  ok(errs.length===0,'no page errors'+(errs.length?': '+errs.join(' | '):''));
  // version + changelog in step
  const v=await p.getAttribute('meta[name=app-version]','content');ok(await p.evaluate(v=>UPDATES[UPDATES.length-1].v===v,v),'UPDATES has an entry for '+v);
@@ -184,12 +191,16 @@ const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+Stri
  ok(s4.e.length===0,'sync tests: no page errors'+(s4.e.length?': '+s4.e.join(' | '):''));await s4.c.close();
  // service worker: Firebase scripts come back "opaque"; they must be kept for offline opens
  {const vm=require('vm');const store=new Map();let net;const H={};const cache={match:async r=>store.get(r.url),put:async(r,x)=>{store.set(r.url,x);},addAll:async()=>{}};
-  const sc={self:{addEventListener:(t,f)=>H[t]=f,skipWaiting(){},clients:{claim(){}}},caches:{open:async()=>cache,keys:async()=>[]},location:{origin:'https://victus2034.github.io'},URL,fetch:r=>net(r)};
+  const sc={self:{addEventListener:(t,f)=>H[t]=f,skipWaiting(){},clients:{claim(){}}},caches:{open:async()=>cache,keys:async()=>[]},location:{origin:'https://victus2034.github.io'},URL,setTimeout,Request:function(u,o){this.url=u;Object.assign(this,o);},fetch:r=>net(r)};
   vm.createContext(sc);vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),sc);
   const go=(u,n)=>{net=n;let out;H.fetch({request:{url:u,method:'GET'},respondWith:x=>out=x});return out;};
   const opq={ok:false,type:'opaque',status:0,clone(){return this;}},fb='https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js';
   await go(fb,()=>Promise.resolve(opq));const off=await go(fb,()=>Promise.reject(new Error('offline')));
   await go('https://victus2034.github.io/exam-journal/nope.js',()=>Promise.resolve({ok:false,type:'basic',status:404,clone(){return this;}}));
-  ok(off===opq&&!store.has('https://victus2034.github.io/exam-journal/nope.js'),'offline: Firebase script served from the app cache, 404s not cached');}
+  ok(off===opq&&!store.has('https://victus2034.github.io/exam-journal/nope.js'),'offline: Firebase script served from the app cache, 404s not cached');
+  const page='https://victus2034.github.io/exam-journal/',oldR={ok:true,v:'old',clone(){return this;}},newR={ok:true,v:'new',clone(){return this;}};
+  const nav=(n)=>{net=n;let out;H.fetch({request:{url:page,method:'GET',mode:'navigate'},respondWith:x=>out=x});return out;};
+  store.set(page,oldR);const got=await nav(()=>Promise.resolve(newR));ok(got===newR&&store.get(page)===newR,'online: a new build is shown on this open, not the next');
+  const offp=await nav(()=>Promise.reject(new Error('offline')));ok(offp===newR,'offline: page served from the app cache');}
  await b.close();srv.close();console.log(fails?fails+' failed':'all passed');process.exit(fails?1:0);
 })().catch(e=>{console.error(e);process.exit(1);});
