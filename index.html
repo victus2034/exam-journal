@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <title>Shiva's Exam Journal</title>
-<meta name="app-version" content="2026-11-21.19">
+<meta name="app-version" content="2026-11-22.20">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2c4bd1">
@@ -316,16 +316,16 @@ textarea{min-height:62px;resize:vertical}
  </header>
 
  <nav class="tabs" role="tablist" aria-label="Sections">
-  <button role="tab" id="t-overview" aria-selected="true" data-tab="overview">Overview</button>
-  <button role="tab" id="t-guide" aria-selected="false" data-tab="guide">Guide</button>
-  <button role="tab" id="t-syllabus" aria-selected="false" data-tab="syllabus">Syllabus</button>
-  <button role="tab" id="t-common" aria-selected="false" data-tab="common">Common</button>
-  <button role="tab" id="t-journal" aria-selected="false" data-tab="journal">Journal</button>
-  <button role="tab" id="t-exams" aria-selected="false" data-tab="exams">Exam dates</button>
+  <button role="tab" id="t-overview" aria-selected="true" aria-controls="v-overview" tabindex="0" data-tab="overview">Overview</button>
+  <button role="tab" id="t-guide" aria-selected="false" aria-controls="v-guide" tabindex="-1" data-tab="guide">Guide</button>
+  <button role="tab" id="t-syllabus" aria-selected="false" aria-controls="v-syllabus" tabindex="-1" data-tab="syllabus">Syllabus</button>
+  <button role="tab" id="t-common" aria-selected="false" aria-controls="v-common" tabindex="-1" data-tab="common">Common</button>
+  <button role="tab" id="t-journal" aria-selected="false" aria-controls="v-journal" tabindex="-1" data-tab="journal">Journal</button>
+  <button role="tab" id="t-exams" aria-selected="false" aria-controls="v-exams" tabindex="-1" data-tab="exams">Exam dates</button>
  </nav>
 
  <!-- OVERVIEW -->
- <section id="v-overview" class="view" style="display:grid;gap:20px">
+ <section id="v-overview" role="tabpanel" aria-labelledby="t-overview" class="view" style="display:grid;gap:20px">
   <div class="stats" id="stats"></div>
   <div class="two eq"><div class="panel now" id="onow-tech"></div><div class="panel now" id="onow-non"></div></div>
   <div style="display:grid;gap:10px">
@@ -344,7 +344,7 @@ textarea{min-height:62px;resize:vertical}
  </section>
 
  <!-- GUIDE -->
- <section id="v-guide" class="view" hidden style="display:grid;gap:18px">
+ <section id="v-guide" role="tabpanel" aria-labelledby="t-guide" class="view" hidden style="display:grid;gap:18px">
   <div class="chips" id="gtrack"></div>
   <div class="panel" id="gplan" style="grid-template-columns:auto minmax(0,1fr);align-items:end;gap:16px"></div>
   <div class="panel now" id="gnow"></div>
@@ -357,7 +357,7 @@ textarea{min-height:62px;resize:vertical}
  </section>
 
  <!-- SYLLABUS -->
- <section id="v-syllabus" class="view" hidden style="display:grid;gap:16px">
+ <section id="v-syllabus" role="tabpanel" aria-labelledby="t-syllabus" class="view" hidden style="display:grid;gap:16px">
   <div class="chips" id="exchips"></div>
   <div id="exinfo" style="display:grid;gap:12px"></div>
   <div class="legend">
@@ -369,14 +369,14 @@ textarea{min-height:62px;resize:vertical}
  </section>
 
  <!-- COMMON -->
- <section id="v-common" class="view" hidden style="display:grid;gap:16px">
+ <section id="v-common" role="tabpanel" aria-labelledby="t-common" class="view" hidden style="display:grid;gap:16px">
   <div class="panel"><div class="row"><h3>Study once, use in many exams</h3><span class="small muted">Subjects shared by the most exams</span></div><div class="cmtop" id="cmtop"></div></div>
   <div class="panel cmdet" id="cmdetail" hidden></div>
   <div class="panel" style="padding:0;overflow:hidden;gap:0"><div style="padding:14px 16px;display:grid;gap:10px"><div class="row"><h3>Subject × exam weightage</h3><span class="small muted" id="cmcount"></span></div><div class="cmfil" id="cmf"></div><div class="small muted">Each cell = questions (or marks) for that subject in that exam. <b>~</b> = my estimate from SSC JE Paper 2 share, because the board does not publish a split. <b>Section 50</b> = the subject shares a 50-Q section with others. <b>✓</b> = in syllabus, size not fixed. Tap a subject to see its value across exams.</div></div><div class="seqwrap" id="cmtable"></div></div>
  </section>
 
  <!-- JOURNAL -->
- <section id="v-journal" class="view" hidden style="display:grid;gap:16px">
+ <section id="v-journal" role="tabpanel" aria-labelledby="t-journal" class="view" hidden style="display:grid;gap:16px">
   <div class="panel">
    <h2>Log a session</h2>
    <form class="jf" id="jform">
@@ -405,7 +405,7 @@ textarea{min-height:62px;resize:vertical}
  </section>
 
  <!-- EXAMS -->
- <section id="v-exams" class="view" hidden style="display:grid;gap:14px">
+ <section id="v-exams" role="tabpanel" aria-labelledby="t-exams" class="view" hidden style="display:grid;gap:14px">
   <div class="note">Dates with a dashed tag are my estimates from past cycles. When a notification comes out, put the real date here and tick <b>Confirmed</b>. Always check the official site.</div>
   <div class="extable" id="extable"></div>
  </section>
@@ -628,7 +628,7 @@ const sortedJournal=()=>[...state.journal].sort((a,b)=>(b.date||"").localeCompar
 /* ---------------- RENDER ---------------- */
 let curTab="overview", curExam="sscje", curSrc="", curDem="";
 const openMods=new Set();
-function showTab(t){curTab=t;document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));document.querySelectorAll(".view").forEach(v=>v.hidden=v.id!=="v-"+t);try{history.replaceState(null,"","#"+t);}catch(e){}window.scrollTo(0,0);renderAll();}
+function showTab(t){curTab=t;document.querySelectorAll("nav.tabs button").forEach(b=>{b.setAttribute("aria-selected",b.dataset.tab===t);b.tabIndex=b.dataset.tab===t?0:-1;});document.querySelectorAll(".view").forEach(v=>v.hidden=v.id!=="v-"+t);try{history.replaceState(null,"","#"+t);}catch(e){}window.scrollTo(0,0);renderAll();}
 
 function renderStats(){
  const t=today();const wk=new Date(t);wk.setDate(t.getDate()-6);
@@ -855,7 +855,8 @@ const UPDATES=[
  {v:"2026-11-01.16",n:"Audit fixes",i:["Journal: no future dates, max 24h a day, mock score must fit its total","Saving offline while signed in no longer hangs; restore replaces old data and never breaks the app","Restored entries can be deleted; bad exam dates are refused"]},
  {v:"2026-11-08.17",n:"Audit fixes 2",i:["Mock scores like 61.67 (−1/3 marking) can be saved","Reset asks first; a tick right before closing the app is kept","Left open overnight, the journal date and countdowns move to the new day; odd backup values can't break any tab"]},
  {v:"2026-11-16.18",n:"Audit fixes 3",i:["Hours like 1.67 (1h 40m) can be saved; a double tap on Save no longer logs twice","Exams marked Appeared or Selected stop counting as your next exam","Journal shows 50 entries at a time; signed in and offline now says Offline"]},
- {v:"2026-11-21.19",n:"Audit fixes 4",i:["A long link in a journal entry no longer pushes the page off-screen; Guide sequence text fits on phones","Signed in: opens offline still sync, old device data can't overwrite synced data, 500+ entries upload, sign-out shows this device's data","Exam notes save while typing; full storage warns; two tabs don't wipe each other; Mark all done / Reset follow the filter"]}
+ {v:"2026-11-21.19",n:"Audit fixes 4",i:["A long link in a journal entry no longer pushes the page off-screen; Guide sequence text fits on phones","Signed in: opens offline still sync, old device data can't overwrite synced data, 500+ entries upload, sign-out shows this device's data","Exam notes save while typing; full storage warns; two tabs don't wipe each other; Mark all done / Reset follow the filter"]},
+ {v:"2026-11-22.20",n:"Audit fixes 5",i:["Phones get a new build on the next open, not one open later","Tabs work with arrow keys; dialogs take focus and give it back when closed"]}
 ];
 const appVer=()=>(document.querySelector('meta[name="app-version"]')||{}).content||"";
 const short=v=>"v"+v.slice(5);
@@ -863,7 +864,7 @@ function renderVer(){const v=appVer();const p=document.getElementById("appVerPil
 function showUpdates(){
  const v=appVer();const d=document.createElement("div");d.className="dlg";
  d.innerHTML=`<div role="dialog" aria-modal="true" aria-label="What's new" class="dlgbox"><div class="row"><h3>What's new</h3><button class="lnk" data-x>Close</button></div><div class="small muted">This copy: ${esc(v)}</div><div class="uplog">${[...UPDATES].reverse().map(u=>`<div class="upi"><div class="row"><b><span class="mono">${short(u.v)}</span> · ${esc(u.n)}</b>${u.v===v?'<span class="pill st-selected">Current</span>':""}</div><div class="small muted">${fmtDate(u.v.slice(0,10))}</div><ul class="wl">${u.i.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")}</div></div>`;
- document.body.appendChild(d);d.onclick=e=>{if(e.target===d||e.target.hasAttribute("data-x"))d.remove();};
+ openDlg(d);d.onclick=e=>{if(e.target===d||e.target.hasAttribute("data-x"))closeDlg(d);};
 }
 function renderChips(){document.getElementById("exchips").innerHTML=EXAMS.map(e=>`<button class="chip ${e.t}" data-sel="${e.id}" aria-pressed="${e.id===curExam}">${esc(e.name)}</button>`).join("");}
 function renderSyllabus(){
@@ -1080,7 +1081,13 @@ window.addEventListener("focus",dayCheck);setInterval(dayCheck,60000);
 document.getElementById("jDate").addEventListener("focus",dayCheck);
 // Two tabs/windows on "this device" mode: a save in one used to be wiped by the next save in the other. Pick up the other tab's save.
 window.addEventListener("storage",e=>{if(e.key===LKEY&&mode==="local"){resetState();loadLocal();renderAll();}});
-document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".dlg,.bkdlg").forEach(d=>d.remove());});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".dlg,.bkdlg").forEach(closeDlg);});
+// Dialogs: move focus inside on open (keyboard and screen readers landed behind it) and back to the button that opened it on close.
+function openDlg(d){d._ret=document.activeElement;document.body.appendChild(d);const f=d.querySelector("button,[href],input,label.btn");if(f){if(!f.hasAttribute("tabindex")&&f.tagName==="LABEL")f.tabIndex=0;f.focus();}}
+function closeDlg(d){d.remove();if(d._ret&&d._ret.isConnected)d._ret.focus();}
+// Arrow / Home / End move between tabs, as on any tab bar.
+document.querySelector("nav.tabs").addEventListener("keydown",e=>{const B=[...document.querySelectorAll("nav.tabs button")];const i=B.indexOf(document.activeElement);if(i<0)return;
+ const j={ArrowRight:i+1,ArrowLeft:i-1,Home:0,End:B.length-1}[e.key];if(j===undefined)return;e.preventDefault();const b=B[(j+B.length)%B.length];showTab(b.dataset.tab);b.focus();});
 // Send ticks waiting in the 0.7s batch now, so closing the app right after a tap doesn't lose it.
 function flushProgress(){if(mode!=="db")return;for(const k in ptimers){clearTimeout(ptimers[k]);db.doc("progress/"+k).set({s:{...(state.progress[k]||{})},d:{...(state.dates[k]||{})},r:{...(state.revs[k]||{})}}).catch(err);delete ptimers[k];}}
 window.addEventListener("pagehide",()=>{flushNote();flushProgress();});
@@ -1155,7 +1162,7 @@ let fbDb=null,fbUser=null;
 <script>
 document.getElementById("bkBtn").onclick=()=>{
  const d=document.createElement("div");d.className="bkdlg";d.innerHTML=`<div role="dialog" aria-modal="true" aria-label="Backup"><h3>Backup</h3><div class="small muted">Download all your ticks, journal, dates and plan as one file. Restore it on any device or browser.</div><button class="btn" id="bkOut">Download backup</button><label class="btn ghost" style="text-align:center;cursor:pointer">Restore from file<input type="file" id="bkIn" accept=".json,application/json" hidden></label><button class="lnk" id="bkX" style="justify-self:end">Close</button></div>`;
- document.body.appendChild(d);const close=()=>d.remove();d.onclick=e=>{if(e.target===d)close();};d.querySelector("#bkX").onclick=close;
+ openDlg(d);const close=()=>closeDlg(d);d.onclick=e=>{if(e.target===d)close();};d.querySelector("#bkX").onclick=close;
  d.querySelector("#bkOut").onclick=()=>{const data={app:"shiva-exam-journal",v:1,at:new Date().toISOString(),exams:state.exams,progress:state.progress,dates:state.dates,revs:state.revs,journal:state.journal.filter(j=>!j.example),plan:state.plan};
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:"application/json"}));a.download="exam-journal-backup-"+iso(today())+".json";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);};
  d.querySelector("#bkIn").onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{let x;try{x=JSON.parse(await f.text());}catch(_){throw new Error("This file is not a backup (not valid JSON).");}if(!x||x.app!=="shiva-exam-journal")throw new Error("Not an exam journal backup");
